@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 namespace DynamicBridge.Configuration;
 public enum SpecialPenumbraAssignment
 {
-    Use_Named_Collection, Remove_Individual_Assignment, Use_No_Mods
+    使用独立分配, 移除独立分配, 不使用模组
 }

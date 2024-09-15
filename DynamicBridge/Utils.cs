@@ -242,7 +242,7 @@ namespace DynamicBridge
         public static string GetHouseDefaultName()
         {
             var h = HousingManager.Instance();
-            return $"{Svc.Data.GetExcelSheet<TerritoryType>().GetRow(Svc.ClientState.TerritoryType)?.PlaceNameRegion.Value?.Name?.ExtractText()}, Ward {h->GetCurrentWard()+1}, plot {h->GetCurrentPlot()+1}";
+            return $"{Svc.Data.GetExcelSheet<TerritoryType>().GetRow(Svc.ClientState.TerritoryType)?.PlaceNameRegion.Value?.Name?.ExtractText()}，第{h->GetCurrentWard()+1}区，{h->GetCurrentPlot()+1}号";
         }
 
         public static GlamourerDesignInfo? GetDesignByGUID(string GUID)
@@ -303,14 +303,14 @@ namespace DynamicBridge
             return TryFindBytes(haystack, needle.Split(" ").Select(x => byte.Parse(x, NumberStyles.HexNumber)).ToArray(), out pos);
         }
 
-        public static string PrintRange(this IEnumerable<string> s, out string FullList, string noneStr = "Any")
+        public static string PrintRange(this IEnumerable<string> s, out string FullList, string noneStr = "任何")
         {
             FullList = null;
             var list = s.ToArray();
             if (list.Length == 0) return noneStr;
             if (list.Length == 1) return list[0].ToString();
             FullList = list.Select(x => x.ToString()).Join("\n");
-            return $"{list.Length} selected";
+            return $"{list.Length} 已选中";
         }
 
         public static string GetName(this MoodleInfo info) => GetName(info, out _);
@@ -330,7 +330,7 @@ namespace DynamicBridge
             return info.Guid.ToString();
         }
 
-        public static string PrintRange<T>(this IEnumerable<T> s, IEnumerable<T> notS, out string FullList, string noneStr = "Any")
+        public static string PrintRange<T>(this IEnumerable<T> s, IEnumerable<T> notS, out string FullList, string noneStr = "任何")
         {
             if (!C.AllowNegativeConditions)
             {

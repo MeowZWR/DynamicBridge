@@ -22,14 +22,14 @@ public class Migrator
             PluginLog.Information($"Migrating profile {x.Key}/{x.Value.Name}");
             C.ProfilesL.Add(x.Value);
             var charName = x.Value.Name;
-            x.Value.Name = $"Converted profile {charName}";
+            x.Value.Name = $"转换的配置文件 {charName}";
             x.Value.SetCharacter(x.Key);
             if(x.Value.Name != "") C.SeenCharacters[x.Key] = charName;
             foreach(var s in x.Value.Subprofiles)
             {
                 PluginLog.Information($"  Migrating subprofile {s.Name}");
                 C.ProfilesL.Add(s);
-                s.Name = $"Converted subprofile {s.Name} / {charName}";
+                s.Name = $"转换的子配置 {s.Name} / {charName}";
             }
             x.Value.Subprofiles.Clear();
         }

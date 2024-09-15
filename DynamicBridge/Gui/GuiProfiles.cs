@@ -155,7 +155,7 @@ public static class GuiProfiles
                 if (ImGuiEx.IconButton(FontAwesomeIcon.Pen.ToIconString()))
                 {
                     UI.SelectedProfile = profile;
-                    new TickScheduler(() => UI.RequestTab = "Dynamic Rules");
+                    new TickScheduler(() => UI.RequestTab = "动态规则");
                 }
                 ImGuiEx.Tooltip(Lang.SelectThisProfileForEditing);
                 ImGui.SameLine();

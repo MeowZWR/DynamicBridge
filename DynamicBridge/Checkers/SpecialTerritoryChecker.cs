@@ -35,11 +35,16 @@ namespace DynamicBridge.Core
 
         public static readonly Dictionary<SpecialTerritory, string> Renames = new()
         {
-            [SpecialTerritory.Aquatic_Ocean] = "Aquatic: Ocean",
-            [SpecialTerritory.Aquatic_Lake] = "Aquatic: Lake",
-            [SpecialTerritory.Aquatic_River] = "Aquatic: River",
-            [SpecialTerritory.Aquatic_Frozen] = "Aquatic: Frozen",
-            [SpecialTerritory.Aquatic_Hot_Springs] = "Aquatic: Hot Springs",
+            [SpecialTerritory.Inn] = "旅店",
+            [SpecialTerritory.House] = "住宅",
+            [SpecialTerritory.Apartment] = "公寓",
+            [SpecialTerritory.Residential_area] = "住宅区",
+            [SpecialTerritory.Duty] = "任务",
+            [SpecialTerritory.Aquatic_Ocean] = "水域：海洋",
+            [SpecialTerritory.Aquatic_Lake] = "水域：湖泊",
+            [SpecialTerritory.Aquatic_River] = "水域：河流",
+            [SpecialTerritory.Aquatic_Frozen] = "水域：冰川",
+            [SpecialTerritory.Aquatic_Hot_Springs] = "水域：温泉",
         };
 
         public static bool Check(this SpecialTerritory terr)

@@ -53,7 +53,7 @@ public unsafe static class UI
             (Lang.TabCharacters, GuiCharacters.Draw, Colors.TabBlue, true),
             (Lang.TabSettings, GuiSettings.Draw, null, true),
             InternalLog.ImGuiTab(),
-            (C.Debug?"Debug":null, Debug.Draw, ImGuiColors.DalamudGrey3, true),
+            (C.Debug?"调试":null, Debug.Draw, ImGuiColors.DalamudGrey3, true),
             ]);
         RequestTab = null;
     }
@@ -127,7 +127,7 @@ public unsafe static class UI
                         {
                             new TickScheduler(() => SelectedProfile.SetCharacter(Player.CID));
                         }
-                        ImGuiEx.Tooltip($"Assign profile $1 to $2".Params(SelectedProfile?.CensoredName, Censor.Character(Player.NameWithWorld)));
+                        ImGuiEx.Tooltip($"分配配置文件 $1 给 $2".Params(SelectedProfile?.CensoredName, Censor.Character(Player.NameWithWorld)));
                     }
                     else
                     {

@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 namespace DynamicBridge.Core;
 public enum ETime
 {
-    Dawn, Morning, Day, Dusk, Evening, Night
+    黎明, 早晨, 下午, 黄昏, 傍晚, 夜晚
 }

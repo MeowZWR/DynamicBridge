@@ -8,14 +8,14 @@ namespace DynamicBridge.Core
 {
     public enum CharacterState
     {
-        Floating,
-        Swimming,
-        Diving,
-        Mounted_on_the_ground,
-        Flying_in_the_air,
-        Flying_underwater,
-        Wading_in_water,
-        Watching_cutscene,
-        In_combat,
+        浮水,
+        游泳,
+        潜水,
+        地面坐骑,
+        空中坐骑,
+        水下坐骑,
+        涉水,
+        观看过场动画,
+        战斗中
     }
 }

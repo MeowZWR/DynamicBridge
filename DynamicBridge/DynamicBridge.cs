@@ -455,14 +455,14 @@ public unsafe class DynamicBridge : IDalamudPlugin
 
     void ApplyPresetPenumbra(Preset preset, ref bool DoNullPenumbra)
     {
-        if (preset.PenumbraType == SpecialPenumbraAssignment.Remove_Individual_Assignment)
+    	if (preset.PenumbraType == SpecialPenumbraAssignment.移除独立分配)
         {
             PenumbraManager.SetAssignment("");
             DoNullPenumbra = false;
         }
-        else if(preset.PenumbraType == SpecialPenumbraAssignment.Use_No_Mods)
+        else if(preset.PenumbraType == SpecialPenumbraAssignment.不使用模组)
         {
-            PenumbraManager.SetAssignment("None");
+        	PenumbraManager.SetAssignment("无");
             DoNullPenumbra = false;
         }
         else if (preset.Penumbra.Count > 0)

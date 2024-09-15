@@ -18,7 +18,7 @@ namespace DynamicBridge.Configuration
         public List<string> Customize = [];
         public List<string> Penumbra = [];
         public List<MoodleInfo> Moodles = [];
-        public SpecialPenumbraAssignment PenumbraType = SpecialPenumbraAssignment.Use_Named_Collection;
+        public SpecialPenumbraAssignment PenumbraType = SpecialPenumbraAssignment.使用独立分配;
         public bool IsStatic = false;
     }
 }

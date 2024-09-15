@@ -35,7 +35,7 @@ public static class GuiCharacters
 
                 var currentProfile = C.ProfilesL.FirstOrDefault(z => z.Characters.Contains(x.Key));
                 ImGuiEx.SetNextItemFullWidth();
-                if (ImGui.BeginCombo($"selProfile", currentProfile?.CensoredName ?? "- No profile -", C.ComboSize))
+                if (ImGui.BeginCombo($"selProfile", currentProfile?.CensoredName ?? "- 不分配 -", C.ComboSize))
                 {
                     if (ImGui.Selectable(Lang.NoProfileSelectable))
                     {

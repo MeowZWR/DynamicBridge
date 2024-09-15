@@ -242,7 +242,7 @@ namespace DynamicBridge.Gui
             if (ImGui.BeginTable($"##presets{extraID}", cnt, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable | ImGuiTableFlags.Reorderable))
             {
                 ImGui.TableSetupColumn("  ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoSort);
-                ImGui.TableSetupColumn("Name");
+                ImGui.TableSetupColumn("名称");
                 if (C.EnableGlamourer) ImGui.TableSetupColumn("Glamourer");
                 if (C.EnableCustomize) ImGui.TableSetupColumn("Customize+");
                 if (C.EnableHonorific) ImGui.TableSetupColumn("Honorific");
@@ -394,7 +394,7 @@ namespace DynamicBridge.Gui
                         {
                             ImGui.TableNextColumn();
                             ImGuiEx.SetNextItemFullWidth();
-                            if (ImGui.BeginCombo("##glamour", ((string[])[.. preset.Glamourer.Select(P.GlamourerManager.TransformName), .. preset.ComplexGlamourer]).PrintRange(out var fullList, "- None -"), C.ComboSize))
+                            if (ImGui.BeginCombo("##glamour", ((string[])[.. preset.Glamourer.Select(P.GlamourerManager.TransformName), .. preset.ComplexGlamourer]).PrintRange(out var fullList, "- 未选择 -"), C.ComboSize))
                             {
                                 if (ImGui.IsWindowAppearing()) Utils.ResetCaches();
                                 FiltersSelection();
@@ -606,13 +606,13 @@ namespace DynamicBridge.Gui
                             ImGui.TableNextColumn();
                             ImGuiEx.SetNextItemFullWidth();
                             string fullList = null;
-                            if (ImGui.BeginCombo("##penumbra", preset.PenumbraType != SpecialPenumbraAssignment.Use_Named_Collection ? preset.PenumbraType.ToString().Replace("_", " ") : preset.Penumbra.PrintRange(out fullList, "- None -"), C.ComboSize))
+                            if (ImGui.BeginCombo("##penumbra", preset.PenumbraType != SpecialPenumbraAssignment.使用独立分配? preset.PenumbraType.ToString().Replace("_", " "): preset.Penumbra.PrintRange(out fullList, "- 未选择 -"), C.ComboSize))
                             {
                                 ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, Utils.IndentSpacing);
                                 if (ImGui.IsWindowAppearing()) Utils.ResetCaches();
                                 ImGuiEx.Text(Lang.AssignmentType);
                                 ImGuiEx.EnumCombo($"##asstype", ref preset.PenumbraType);
-                                if (preset.PenumbraType == SpecialPenumbraAssignment.Use_Named_Collection)
+                                if (preset.PenumbraType == SpecialPenumbraAssignment.使用独立分配)
                                 {
                                     FiltersSelection();
                                     var collections = P.PenumbraManager.GetCollectionNames().Order();
@@ -663,7 +663,7 @@ namespace DynamicBridge.Gui
                         {
                             ImGui.TableNextColumn();
                             ImGuiEx.SetNextItemFullWidth();
-                            if (ImGui.BeginCombo("##moodles", preset.Moodles.Select(Utils.GetName).PrintRange(out var fullList, "- None -"), C.ComboSize))
+                            if (ImGui.BeginCombo("##moodles", preset.Moodles.Select(Utils.GetName).PrintRange(out var fullList, "- 未选择 -"), C.ComboSize))
                             {
                                 ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, Utils.IndentSpacing);
                                 if (ImGui.IsWindowAppearing()) Utils.ResetCaches();
