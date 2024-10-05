@@ -268,7 +268,10 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 打开插件设置窗口\n/db apply - 立即重新应用规则\n/db static &lt;name&gt; - 将预设标记为静态\n/db dynamic - 取消静态预设，使用动态规则 的本地化字符串。
+        ///   查找类似 打开插件设置窗口
+        ////db apply - 立即重新应用规则
+        ////db static &lt;name&gt; - 将预设标记为静态
+        ////db dynamic - 取消静态预设，使用动态规则 的本地化字符串。
         /// </summary>
         public static string CommangHelp {
             get {
@@ -538,7 +541,8 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 无法从剪贴板粘贴：\n 的本地化字符串。
+        ///   查找类似 无法从剪贴板粘贴：
+        /// 的本地化字符串。
         /// </summary>
         public static string FailedToPasteFromClipboardN {
             get {
@@ -754,7 +758,8 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 所有在Honorific中添加的称号都会显示在全局预设中，但只会使用指定给当前角色的配置。\n除非在设置中启用了“允许选择为其他角色添加的称号”。 的本地化字符串。
+        ///   查找类似 所有在Honorific中添加的称号都会显示在全局预设中，但只会使用指定给当前角色的配置。
+        ///除非在设置中启用了“允许选择为其他角色添加的称号”。 的本地化字符串。
         /// </summary>
         public static string HonorificGlobalPresetNotice {
             get {
@@ -844,7 +849,8 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 警告！在日志和调试选项卡以及卫月日志中仍会显示真实名称！\n警告！如果要分享配置文件并且启用了匿名，拿到文件的人[可以恢复真实名称]。如果你需要向他人发送配置文件并保持匿名状态，请单击“重新生成匿名种子”按钮，发送配置文件，并再次单击该按钮。 的本地化字符串。
+        ///   查找类似 警告！在日志和调试选项卡以及卫月日志中仍会显示真实名称！
+        ///警告！如果要分享配置文件并且启用了匿名，拿到文件的人[可以恢复真实名称]。如果你需要向他人发送配置文件并保持匿名状态，请单击“重新生成匿名种子”按钮，发送配置文件，并再次单击该按钮。 的本地化字符串。
         /// </summary>
         public static string IncognitoWarning {
             get {
@@ -925,7 +931,8 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 满足以下任何条件都将触发规则：\n 的本地化字符串。
+        ///   查找类似 满足以下任何条件都将触发规则：
+        /// 的本地化字符串。
         /// </summary>
         public static string MeetingAnyOfTheFollowingConditionsWillResultInRuleBeingTriggeredN {
             get {
@@ -952,7 +959,8 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 所有选择的Moodles/预设都将被应用：\n$ 的本地化字符串。
+        ///   查找类似 所有选择的Moodles/预设都将被应用：
+        ///$ 的本地化字符串。
         /// </summary>
         public static string MoodlesApplicationTooltip {
             get {
@@ -1612,7 +1620,8 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 将在以下选项中随机选择：\n 的本地化字符串。
+        ///   查找类似 将在以下选项中随机选择：
+        /// 的本地化字符串。
         /// </summary>
         public static string WillBeRandomlySelectedBetween {
             get {

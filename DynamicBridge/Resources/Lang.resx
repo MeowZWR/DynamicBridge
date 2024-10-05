@@ -205,7 +205,7 @@
     <value>- 未选择 -</value>
   </data>
   <data name="HonorificGlobalPresetNotice" xml:space="preserve">
-    <value>所有在Honorific中添加的称号都会显示在全局预设中，但只会使用指定给当前角色的配置。\n除非在设置中启用了“允许选择为其他角色添加的称号”。</value>
+    <value>所有在Honorific中添加的称号都会显示在全局预设中，但只会使用指定给当前角色的配置。&#xD;&#xA;除非在设置中启用了“允许选择为其他角色添加的称号”。</value>
   </data>
   <data name="AssignmentType" xml:space="preserve">
     <value>分配类型：</value>
@@ -217,7 +217,7 @@
     <value>状态预设</value>
   </data>
   <data name="MoodlesApplicationTooltip" xml:space="preserve">
-    <value>所有选择的Moodles/预设都将被应用：\n$</value>
+    <value>所有选择的Moodles/预设都将被应用：&#xD;&#xA;$</value>
   </data>
   <data name="CopyToClipboard" xml:space="preserve">
     <value>复制到剪贴板</value>
@@ -277,10 +277,10 @@
     <value>按住CTRL并点击来删除</value>
   </data>
   <data name="WillBeRandomlySelectedBetween" xml:space="preserve">
-    <value>将在以下选项中随机选择：\n</value>
+    <value>将在以下选项中随机选择：&#xD;&#xA;</value>
   </data>
   <data name="MeetingAnyOfTheFollowingConditionsWillResultInRuleBeingTriggeredN" xml:space="preserve">
-    <value>满足以下任何条件都将触发规则：\n</value>
+    <value>满足以下任何条件都将触发规则：&#xD;&#xA;</value>
   </data>
   <data name="NotLoggedIn" xml:space="preserve">
     <value>未登录</value>
@@ -394,7 +394,7 @@
     <value>从剪切板粘贴规则</value>
   </data>
   <data name="FailedToPasteFromClipboardN" xml:space="preserve">
-    <value>无法从剪贴板粘贴：\n</value>
+    <value>无法从剪贴板粘贴：&#xD;&#xA;</value>
   </data>
   <data name="PresetIsSelectedAsStaticAutomationDisabled" xml:space="preserve">
     <value>预设 $ 已被设置为静态。动态规则自动执行已禁用。</value>
@@ -511,7 +511,7 @@
     <value>将角色名称替换为随机动物名称，将服务器名称替换为任意幻想世界名称。相同的对象总是会产生相同的名字，对你来说是这样，但对其他人来说却不是。此外，隐藏输入字段中的文本，并显示临时配置文件/预设ID来代替。</value>
   </data>
   <data name="IncognitoWarning" xml:space="preserve">
-    <value>警告！在日志和调试选项卡以及卫月日志中仍会显示真实名称！\n警告！如果要分享配置文件并且启用了匿名，拿到文件的人[可以恢复真实名称]。如果你需要向他人发送配置文件并保持匿名状态，请单击“重新生成匿名种子”按钮，发送配置文件，并再次单击该按钮。</value>
+    <value>警告！在日志和调试选项卡以及卫月日志中仍会显示真实名称！&#xD;&#xA;警告！如果要分享配置文件并且启用了匿名，拿到文件的人[可以恢复真实名称]。如果你需要向他人发送配置文件并保持匿名状态，请单击“重新生成匿名种子”按钮，发送配置文件，并再次单击该按钮。</value>
   </data>
   <data name="IncognitoReplacement" xml:space="preserve">
     <value>尽可能只使用首字母替换原文字。</value>
@@ -673,7 +673,7 @@ fai=Circle
     <value>由于插件版本已变更，已创建当前配置的备份。</value>
   </data>
   <data name="CommangHelp" xml:space="preserve">
-    <value>打开插件设置窗口\n/db apply - 立即重新应用规则\n/db static &lt;name&gt; - 将预设标记为静态\n/db dynamic - 取消静态预设，使用动态规则</value>
+    <value>打开插件设置窗口&#xD;&#xA;/db apply - 立即重新应用规则&#xD;&#xA;/db static &lt;name&gt; - 将预设标记为静态&#xD;&#xA;/db dynamic - 取消静态预设，使用动态规则</value>
   </data>
   <data name="ChatNoticeGlamourerWarning" xml:space="preserve">
     <value>[DynamicBridge] Glamourer自动执行已启用，但是DynamicBridge还未配置为与其协同运行。 这将导致问题。请禁用Glamourer自动执行或在DynamicBridge插件设置选项卡中进行设置（使用命令/db或/db - settings打开设置窗口）。</value>
