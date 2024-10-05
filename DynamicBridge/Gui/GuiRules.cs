@@ -504,11 +504,25 @@ namespace DynamicBridge.Gui
                             {
                                 FiltersSelection();
 
-                                // 对 dc 列表进行排序，并确保中文排在前面
-                                var sortedDC = ExcelWorldHelper.GetDataCenters(Enum.GetValues<ExcelWorldHelper.Region>())
-                                    .OrderBy(dc => dc.Name, StringComparer.Create(new System.Globalization.CultureInfo("zh-CN"), true))
-                                    .ToList();
+                                // 添加中文世界
+                                var chineseWorlds = GetChineseWorlds();
 
+                                // 先显示中文世界分组
+                                foreach (var group in chineseWorlds.GroupBy(w => w.DataCenter))
+                                {
+                                    ImGuiEx.Text($"{group.Key}");
+                                    foreach (var cond in group)
+                                    {
+                                        var name = cond.Name;
+                                        if (Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                                        if (OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.Id)) continue;
+                                        ImGuiEx.Spacing();
+                                        DrawSelector(name, cond.Id, rule.Worlds, rule.Not.Worlds);
+                                    }
+                                }
+
+                                // 接着显示其他国际大区
+                                var sortedDC = ExcelWorldHelper.GetDataCenters(Enum.GetValues<ExcelWorldHelper.Region>()).ToList();
                                 foreach (var dc in sortedDC)
                                 {
                                     var worlds = ExcelWorldHelper.GetPublicWorlds().Where(x => x.DataCenter.Row == dc.RowId);
@@ -522,6 +536,7 @@ namespace DynamicBridge.Gui
                                         DrawSelector(name, cond.RowId, rule.Worlds, rule.Not.Worlds);
                                     }
                                 }
+
                                 ImGui.EndCombo();
                             }
                             if (fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
@@ -633,6 +648,60 @@ namespace DynamicBridge.Gui
                 UI.ProfileSelectorCommon();
             }
         }
+
+private static IEnumerable<(uint Id, string Name, string DataCenter)> GetChineseWorlds()
+    {
+        // 土法定义中国大区的服务器
+        var servers = new Dictionary<string, (uint Id, string Name)[]>
+        {
+            ["陆行鸟"] =
+            [
+            (1175u, "晨曦王座"),
+            (1174u, "沃仙曦染"),
+            (1173u, "宇宙和音"),
+            (1167u, "红玉海"),
+            (1060u, "萌芽池"),
+            (1081u, "神意之地"),
+            (1044u, "幻影群岛"),
+            (1042u, "拉诺西亚"),
+        ],
+            ["莫古力"] =
+            [
+            (1121u, "拂晓之间"),
+            (1166u, "龙巢神殿"),
+            (1113u, "旅人栈桥"),
+            (1076u, "白金幻象"),
+            (1176u, "梦羽宝境"),
+            (1171u, "神拳痕"),
+            (1170u, "潮风亭"),
+            (1172u, "白银乡"),
+        ],
+            ["猫小胖"] =
+            [
+            (1179u, "琥珀原"),
+            (1178u, "柔风海湾"),
+            (1177u, "海猫茶屋"),
+            (1169u, "延夏"),
+            (1106u, "静语庄园"),
+            (1045u, "摩杜纳"),
+            (1043u, "紫水栈桥"),
+        ],
+            ["豆豆柴"] =
+            [
+            (1201u, "红茶川"),
+            (1186u, "伊修加德"),
+            (1180u, "太阳海岸"),
+            (1183u, "银泪湖"),
+            (1192u, "水晶塔"),
+            (1202u, "萨雷安"),
+            (1203u, "加雷马"),
+            (1200u, "亚马乌罗提"),
+        ]
+        };
+
+        // 合并所有服务器并返回
+        return servers.SelectMany(dc => dc.Value.Select(w => (w.Id, w.Name, dc.Key)));
+    }
 
         private static void DrawPlaceName(TerritoryType t, Vector4? nullable, string arg2)
         {

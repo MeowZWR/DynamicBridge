@@ -1087,7 +1087,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 $1 | $2 已选中 的本地化字符串。
+        ///   查找类似 $1 | $ 已选中 的本地化字符串。
         /// </summary>
         public static string NotListSelected {
             get {

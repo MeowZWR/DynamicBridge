@@ -697,7 +697,7 @@ fai=Circle
     <value>满足以下任何条件都将使规则无效：</value>
   </data>
   <data name="NotListSelected" xml:space="preserve">
-    <value>$1 | $2 已选中</value>
+    <value>$1 | $ 已选中</value>
   </data>
   <data name="GearsetFallbackName" xml:space="preserve">
     <value>$ 未找到名称</value>
