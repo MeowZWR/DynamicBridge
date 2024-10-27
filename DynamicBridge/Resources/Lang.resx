@@ -349,7 +349,7 @@
     <value>您当前的角色已列入黑名单</value>
   </data>
   <data name="YouAreEditingProfile1WhichIsUsedBy2" xml:space="preserve">
-    <value>您正在编辑配置文件 "$1" 它被用于 "$2".</value>
+    <value>您正在编辑配置文件 "$1" 它被用于 "$"。</value>
   </data>
   <data name="HoldCTRLKeyAndClickToUnassignProfile1From2" xml:space="preserve">
     <value>按住CTRL键并点击来取消分配配置文件 $1 给 $2.</value>
@@ -382,10 +382,10 @@
     <value>- 不分配 -</value>
   </data>
   <data name="DeleteTooltip" xml:space="preserve">
-    <value>按住CTRL键并单击可删除有关$1. 的信息。这也将撤消对该角色的配置文件分配，但一旦您重新登记该角色，$1. 将再次在插件中注册。</value>
+    <value>按住CTRL键并单击可删除有关 $ 的信息。这也将撤消对该角色的配置文件分配，但一旦您重新登记该角色，该角色将再次在插件中注册。</value>
   </data>
   <data name="BlacklistCharaTooltip" xml:space="preserve">
-    <value>将$1. 加入和名单。这将阻止它出现在配置文件分配中。这也将撤消$1. 的配置文件分配。</value>
+    <value>将 $ 加入黑名单。这将阻止它出现在配置文件分配中。这也将撤消该角色的配置文件分配。</value>
   </data>
   <data name="AddNewRule" xml:space="preserve">
     <value>添加新规则</value>

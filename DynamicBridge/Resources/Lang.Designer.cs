@@ -214,7 +214,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 将$1. 加入和名单。这将阻止它出现在配置文件分配中。这也将撤消$1. 的配置文件分配。 的本地化字符串。
+        ///   查找类似 将 $ 加入黑名单。这将阻止它出现在配置文件分配中。这也将撤消该角色的配置文件分配。 的本地化字符串。
         /// </summary>
         public static string BlacklistCharaTooltip {
             get {
@@ -415,7 +415,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 按住CTRL键并单击可删除有关$1. 的信息。这也将撤消对该角色的配置文件分配，但一旦您重新登记该角色，$1. 将再次在插件中注册。 的本地化字符串。
+        ///   查找类似 按住CTRL键并单击可删除有关 $ 的信息。这也将撤消对该角色的配置文件分配，但一旦您重新登记该角色，该角色将再次在插件中注册。 的本地化字符串。
         /// </summary>
         public static string DeleteTooltip {
             get {
@@ -1077,7 +1077,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Could not find profile $..
+        ///   查找类似 Could not find profile $. 的本地化字符串。
         /// </summary>
         public static string NoticeProfileSwapProfileNotFound {
             get {
@@ -1086,7 +1086,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Could not find valid Character based on your current Player ID..
+        ///   查找类似 Could not find valid Character based on your current Player ID. 的本地化字符串。
         /// </summary>
         public static string NotifyProfileSwapCharacterNotFoundOrBlacklisted {
             get {
@@ -1095,7 +1095,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to $ was made static..
+        ///   查找类似 $ 已设为静态。 的本地化字符串。
         /// </summary>
         public static string NotifyWasMadeStatic {
             get {
@@ -1657,7 +1657,7 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 您正在编辑配置文件 &quot;$1&quot; 它被用于 &quot;$2&quot;. 的本地化字符串。
+        ///   查找类似 您正在编辑配置文件 &quot;$1&quot; 它被用于 &quot;$&quot;。 的本地化字符串。
         /// </summary>
         public static string YouAreEditingProfile1WhichIsUsedBy2 {
             get {
