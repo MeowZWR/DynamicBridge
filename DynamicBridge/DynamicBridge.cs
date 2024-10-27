@@ -177,6 +177,31 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
             });
         }
+        else if (arguments.StartsWithAny(StringComparison.OrdinalIgnoreCase, "characterprofile", "chp"))
+        {
+            Safe(() =>
+            {
+                var name = arguments[(arguments.IndexOf(" ") + 1)..];
+                var profile = C.ProfilesL.FirstOrDefault(p => p.Name == name);
+
+                if (profile != null)
+                {
+                    if (C.SeenCharacters.ContainsKey(Player.CID) && !C.Blacklist.Contains(Player.CID))
+                    {
+                        profile.SetCharacter(Player.CID);
+
+                    }
+                    else
+                    {
+                        Notify.Error(Lang.NotifyProfileSwapCharacterNotFoundOrBlacklisted);
+                    }
+                }
+                else
+                {
+                    Notify.Error(Lang.NoticeProfileSwapProfileNotFound.Params(name));
+                }
+            });
+        }
         else
         {
             EzConfigGui.Window.IsOpen ^= true;
@@ -541,7 +566,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
             DoNullCustomize = false;
             var randomCusProfile = cfiltered[Random.Next(cfiltered.Length)];
             TaskManager.Enqueue(Utils.WaitUntilInteractable);
-            TaskManager.Enqueue(() => CustomizePlusManager.SetProfile(randomCusProfile, Player.Name));
+            TaskManager.Enqueue(() => CustomizePlusManager.SetProfile(randomCusProfile, Player.NameWithWorld));
         }
     }
 

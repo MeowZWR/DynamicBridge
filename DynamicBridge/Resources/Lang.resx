@@ -702,4 +702,10 @@ fai=Circle
   <data name="GearsetFallbackName" xml:space="preserve">
     <value>$ 未找到名称</value>
   </data>
+  <data name="NotifyProfileSwapCharacterNotFoundOrBlacklisted" xml:space="preserve">
+    <value>Could not find valid Character based on your current Player ID.</value>
+  </data>
+  <data name="NoticeProfileSwapProfileNotFound" xml:space="preserve">
+    <value>Could not find profile $.</value>
+  </data>
 </root>
