@@ -56,11 +56,19 @@ public class CustomizePlusManager
     {
         Cache ??= GetProfileList();
         var charaSenders = chara?.Select(x => Sender.TryParse(x, out var s) ? s : default);
-        foreach(var x in (Cache ?? []))
+        foreach (var x in (Cache ?? []))
         {
-            if (charaSenders == null || charaSenders.Any(c => x.Characters.Any(p => p.Name == c.Name && p.WorldId == c.HomeWorld))) yield return x;
+            if (charaSenders == null ||
+                charaSenders.Any(c =>
+                    x.Characters.Any(p =>
+                        (p.Name == c.Name && p.WorldId == c.HomeWorld) ||
+                        (p.Name == c.Name && p.WorldId == 65535))))
+            {
+                yield return x;
+            }
         }
     }
+
 
     public void ResetCache()
     {
@@ -75,7 +83,10 @@ public class CustomizePlusManager
             PluginLog.Information($"Try parse: {charName}");
             if(Sender.TryParse(charName, out var chara))
             {
-                var charaProfiles = GetProfiles().Where(x => x.Characters.Any(c => c.Name == chara.Name && c.WorldId == chara.HomeWorld)).ToArray();
+                var charaProfiles = GetProfiles().Where(x =>
+                x.Characters.Any(c =>
+                    (c.Name == chara.Name && c.WorldId == chara.HomeWorld) ||
+                    (c.Name == chara.Name && c.WorldId == 65535))).ToArray();
                 PluginLog.Information($"CharaProfiles: {charaProfiles}");
                 if(!WasSet)
                 {
