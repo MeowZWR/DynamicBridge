@@ -672,8 +672,12 @@ fai=Circle
   <data name="LogNoticeVersionChange" xml:space="preserve">
     <value>由于插件版本已变更，已创建当前配置的备份。</value>
   </data>
-  <data name="CommangHelp" xml:space="preserve">
-    <value>打开插件设置窗口&#xD;&#xA;/db apply - 立即重新应用规则&#xD;&#xA;/db static &lt;name&gt; - 将预设标记为静态&#xD;&#xA;/db dynamic - 取消静态预设，使用动态规则</value>
+  <data name="CommandHelp" xml:space="preserve">
+    <value>open the plugin settings
+/db apply → reapply rules immediately
+/db static &lt;name&gt; → mark preset as static
+/db dynamic → cancel static preset and use dynamic rules
+/db characterprofile &lt;name&gt; → changes profile of currently active character to provided profile</value>
   </data>
   <data name="ChatNoticeGlamourerWarning" xml:space="preserve">
     <value>[DynamicBridge] Glamourer自动执行已启用，但是DynamicBridge还未配置为与其协同运行。 这将导致问题。请禁用Glamourer自动执行或在DynamicBridge插件设置选项卡中进行设置（使用命令/db或/db - settings打开设置窗口）。</value>

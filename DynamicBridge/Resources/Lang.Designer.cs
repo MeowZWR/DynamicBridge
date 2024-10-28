@@ -268,14 +268,15 @@ namespace DynamicBridge.Resources {
         }
         
         /// <summary>
-        ///   查找类似 打开插件设置窗口
-        ////db apply - 立即重新应用规则
-        ////db static &lt;name&gt; - 将预设标记为静态
-        ////db dynamic - 取消静态预设，使用动态规则 的本地化字符串。
+        ///   Looks up a localized string similar to open the plugin settings
+        ////db apply → reapply rules immediately
+        ////db static &lt;name&gt; → mark preset as static
+        ////db dynamic → cancel static preset and use dynamic rules
+        ////db characterprofile &lt;name&gt; → changes profile of currently active character to provided profile.
         /// </summary>
-        public static string CommangHelp {
+        public static string CommandHelp {
             get {
-                return ResourceManager.GetString("CommangHelp", resourceCulture);
+                return ResourceManager.GetString("CommandHelp", resourceCulture);
             }
         }
         
