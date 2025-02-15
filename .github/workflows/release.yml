@@ -69,8 +69,8 @@ jobs:
           $verBase = $ver -replace '-cn$', ''
           $path = './repo.json'
           $json = Get-Content -Raw $path | ConvertFrom-Json
-          $json[0].AssemblyVersion = $verNoPrefix
-          $json[0].TestingAssemblyVersion = $verNoPrefix
+          $json[0].AssemblyVersion = $verBase
+          $json[0].TestingAssemblyVersion = $verBase
           $json[0].DownloadLinkInstall = $json.DownloadLinkInstall -replace '[^/]+/DynamicBridge.zip',"$ver/DynamicBridge.zip"
           $json[0].DownloadLinkTesting = $json.DownloadLinkTesting -replace '[^/]+/DynamicBridge.zip',"$ver/DynamicBridge.zip"
           $json[0].DownloadLinkUpdate = $json.DownloadLinkUpdate -replace '[^/]+/DynamicBridge.zip',"$ver/DynamicBridge.zip"
