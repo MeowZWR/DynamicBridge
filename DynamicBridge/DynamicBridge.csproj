@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Authors>NightmareXIV</Authors>
-        <Version>1.0.6.5</Version>
+        <Version>1.0.7.1</Version>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -29,7 +29,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DalamudPackager" Version="2.1.12" />
+        <PackageReference Include="DalamudPackager" Version="2.1.13" />
     </ItemGroup>
 
     <ItemGroup>
@@ -234,20 +234,5 @@
     <ItemGroup>
       <Folder Include="images\" />
       <Folder Include="res\tutorial\" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Update="Resources\Lang.Designer.cs">
-        <DesignTime>True</DesignTime>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>Lang.resx</DependentUpon>
-      </Compile>
-    </ItemGroup>
-
-    <ItemGroup>
-      <EmbeddedResource Update="Resources\Lang.resx">
-        <Generator>PublicResXFileCodeGenerator</Generator>
-        <LastGenOutput>Lang.Designer.cs</LastGenOutput>
-      </EmbeddedResource>
     </ItemGroup>
 </Project>

@@ -13,9 +13,9 @@ public class CustomizePlusManager
     public Guid LastEnabledProfileID = Guid.Empty;
     public CustomizePlusReflector Reflector;
 
-    [EzIPC("Profile.GetList")] Func<IList<IPCProfileDataTuple>> GetProfileList;
-    [EzIPC("Profile.EnableByUniqueId")] Func<Guid, int> EnableProfileByUniqueId;
-    [EzIPC("Profile.DisableByUniqueId")] Func<Guid, int> DisableProfileByUniqueId;
+    [EzIPC("Profile.GetList")] private Func<IList<IPCProfileDataTuple>> GetProfileList;
+    [EzIPC("Profile.EnableByUniqueId")] private Func<Guid, int> EnableProfileByUniqueId;
+    [EzIPC("Profile.DisableByUniqueId")] private Func<Guid, int> DisableProfileByUniqueId;
 
     public CustomizePlusManager()
     {
@@ -23,7 +23,7 @@ public class CustomizePlusManager
         EzIPC.Init(this, "CustomizePlus", SafeWrapper.AnyException);
     }
 
-    List<PathInfo> PathInfos = null;
+    private List<PathInfo> PathInfos = null;
     public List<PathInfo> GetCombinedPathes()
     {
         PathInfos ??= Utils.BuildPathes(GetRawPathes());
@@ -35,23 +35,23 @@ public class CustomizePlusManager
         var ret = new List<string>();
         try
         {
-            foreach (var x in GetProfiles())
+            foreach(var x in GetProfiles())
             {
                 var path = x.VirtualPath;
-                if (path != null)
+                if(path != null)
                 {
                     ret.Add(path);
                 }
             }
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             e.LogInternal();
         }
         return ret;
     }
 
-    IList<IPCProfileDataTuple> Cache = null;
+    private IList<IPCProfileDataTuple> Cache = null;
     public IEnumerable<IPCProfileDataTuple> GetProfiles(IEnumerable<string> chara = null)
     {
         Cache ??= GetProfileList();
@@ -80,15 +80,15 @@ public class CustomizePlusManager
     {
         try
         {
-            PluginLog.Information($"Try parse: {charName}");
+            //PluginLog.Information($"Try parse: {charName}");
             if(Sender.TryParse(charName, out var chara))
             {
                 var charaProfiles = GetProfiles().Where(x =>
                 x.Characters.Any(c =>
                     (c.Name == chara.Name && c.WorldId == chara.HomeWorld) ||
                     (c.Name == chara.Name && c.WorldId == 65535))).ToArray();
-                PluginLog.Information($"CharaProfiles: {charaProfiles}");
-                if(!WasSet)
+                //PluginLog.Information($"CharaProfiles: {charaProfiles}");
+                if (!WasSet)
                 {
                     var enabled = charaProfiles.Where(x => x.IsEnabled);
                     if(enabled.Any())
@@ -118,7 +118,7 @@ public class CustomizePlusManager
                 }
             }
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             e.Log();
         }
@@ -127,7 +127,7 @@ public class CustomizePlusManager
 
     public void RestoreState()
     {
-        if (WasSet)
+        if(WasSet)
         {
             try
             {
@@ -137,7 +137,7 @@ public class CustomizePlusManager
                     EnableProfileByUniqueId(x);
                 }
             }
-            catch (Exception e)
+            catch(Exception e)
             {
                 e.Log();
             }
@@ -147,20 +147,53 @@ public class CustomizePlusManager
     }
 
 
-
+    private Dictionary<string, string> TransformNameCache = [];
     public string TransformName(string originalName)
     {
-        if (Guid.TryParse(originalName, out Guid guid))
+        if (TransformNameCache.TryGetValue(originalName, out var ret))
+        {
+            return ret;
+        }
+        if (Guid.TryParse(originalName, out var guid))
+        {
+            if(GetProfiles().TryGetFirst(x => x.UniqueId == guid, out var entry))
+            {
+                if(C.GlamourerFullPath)
+                {
+                    return CacheAndReturn(entry.VirtualPath);
+                }
+                return CacheAndReturn(entry.Name);
+            }
+        }
+        return CacheAndReturn(originalName);
+
+        string CacheAndReturn(string name)
+        {
+            TransformNameCache[originalName] = name;
+            return TransformNameCache[originalName];
+        }
+    }
+
+    private Dictionary<string, string> FullPathCache = [];
+    public string GetFullPath(string originalName)
+    {
+        if (FullPathCache.TryGetValue(originalName, out var ret))
+        {
+            return ret;
+        }
+        if (Guid.TryParse(originalName, out var guid))
         {
             if (GetProfiles().TryGetFirst(x => x.UniqueId == guid, out var entry))
             {
-                if (C.GlamourerFullPath)
-                {
-                    return entry.VirtualPath;
-                }
-                return entry.Name;
+                return CacheAndReturn(entry.VirtualPath);
             }
         }
-        return originalName;
+        return CacheAndReturn(originalName);
+
+        string CacheAndReturn(string name)
+        {
+            FullPathCache[originalName] = name;
+            return FullPathCache[originalName];
+        }
     }
 }

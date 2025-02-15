@@ -14,20 +14,20 @@ public unsafe class Memory : IDisposable
     [EzHook("40 55 53 56 57 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 4C 63 FA", false)]
     public EzHook<RaptureGearsetModule_EquipGearsetInternal> EquipGearsetHook;
 
-    public byte* IsLPInWater;
+    //public byte* IsLPInWater;
 
     public Memory()
     {
         EzSignatureHelper.Initialize(this);
-        var addr = Svc.SigScanner.GetStaticAddressFromSig("44 38 35 ?? ?? ?? ?? 74 10");
-        IsLPInWater = (byte*)(addr + 2);
+        var addr = Svc.SigScanner.GetStaticAddressFromSig("F6 05 ?? ?? ?? ?? ?? 74 19");
+        //IsLPInWater = (byte*)(addr + 2);
         if(C.UpdateJobGSChange)
         {
             EquipGearsetHook.Enable();
         }
     }
 
-    nint EquipGearsetDetour(nint a1, uint a2, byte a3)
+    private nint EquipGearsetDetour(nint a1, uint a2, byte a3)
     {
         try
         {

@@ -1,4 +1,5 @@
-﻿using ECommons.Throttlers;
+﻿using ECommons.GameHelpers;
+using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace DynamicBridge.Core
 {
     public static class CharacterStateChecker
     {
-        static readonly Dictionary<CharacterState, Func<bool>> States = new()
+        private static readonly Dictionary<CharacterState, Func<bool>> States = new()
         {
             [CharacterState.游泳] = () => Svc.Condition[ConditionFlag.Swimming] && Utils.IsMoving,
             [CharacterState.浮水] = () => Svc.Condition[ConditionFlag.Swimming] && !Utils.IsMoving,
@@ -22,15 +23,16 @@ namespace DynamicBridge.Core
             [CharacterState.观看过场动画] = () => Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent]
                 || Svc.Condition[ConditionFlag.WatchingCutscene78],
             [CharacterState.战斗中] = () => Svc.Condition[ConditionFlag.InCombat],
+            [CharacterState.无法战斗] = () => Player.Available && Player.Object.IsDead
         };
 
         public static bool Check(this CharacterState state)
         {
-            if (States.TryGetValue(state, out var func))
+            if(States.TryGetValue(state, out var func))
             {
                 return func();
             }
-            if (EzThrottler.Throttle("ErrorReport", 10000)) DuoLog.Error($"Cound not find checker for state {state}. Please report this error with logs.");
+            if(EzThrottler.Throttle("ErrorReport", 10000)) DuoLog.Error($"Cound not find checker for state {state}. Please report this error with logs.");
             return false;
         }
     }

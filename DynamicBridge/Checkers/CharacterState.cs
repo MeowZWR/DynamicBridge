@@ -16,6 +16,7 @@ namespace DynamicBridge.Core
         水下坐骑,
         涉水,
         观看过场动画,
-        战斗中
+        战斗中,
+        无法战斗,
     }
 }

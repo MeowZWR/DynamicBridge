@@ -1,4 +1,4 @@
-﻿using Lumina.Excel.GeneratedSheets;
+﻿using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +23,7 @@ namespace DynamicBridge
                     foreach(var w in weathers.WeatherList)
                     {
                         var t = Svc.Data.GetExcelSheet<Weather>().GetRow(w).Name.ExtractText();
-                        if (!Weathers.ContainsKey(w))
+                        if(!Weathers.ContainsKey(w))
                         {
                             Weathers[w] = t;
                         }

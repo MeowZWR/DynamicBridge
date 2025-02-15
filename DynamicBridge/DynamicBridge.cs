@@ -14,10 +14,8 @@ using ECommons.Configuration;
 using ECommons.Events;
 using ECommons.ExcelServices;
 using ECommons.EzEventManager;
-using ECommons.Funding;
 using ECommons.GameHelpers;
 using ECommons.SimpleGui;
-using ECommons.Singletons;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -60,22 +58,21 @@ public unsafe class DynamicBridge : IDalamudPlugin
     {
         P = this;
         ECommonsMain.Init(pi, this, Module.DalamudReflector);
-        PatreonBanner.IsOfficialPlugin = Utils.IsDisguise;
         new TickScheduler(() =>
         {
             C = EzConfig.Init<Config>();
-            var ver = this.GetType().Assembly.GetName().Version.ToString();
+            var ver = GetType().Assembly.GetName().Version.ToString();
             if(C.LastVersion != ver)
             {
                 try
                 {
-                    using (FileStream fs = new FileStream(Path.Combine(Svc.PluginInterface.ConfigDirectory.FullName, $"Backup_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}.zip"), FileMode.Create))
-                    using (ZipArchive arch = new ZipArchive(fs, ZipArchiveMode.Create))
+                    using(var fs = new FileStream(Path.Combine(Svc.PluginInterface.ConfigDirectory.FullName, $"Backup_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}.zip"), FileMode.Create))
+                    using(var arch = new ZipArchive(fs, ZipArchiveMode.Create))
                     {
                         arch.CreateEntryFromFile(EzConfig.DefaultConfigurationFileName, EzConfig.DefaultSerializationFactory.DefaultConfigFileName);
                     }
                     C.LastVersion = ver;
-                    DuoLog.Information(Lang.LogNoticeVersionChange);
+                    DuoLog.Information($"Because plugin version was changed, a backup of your current configuraton has been created.");
                 }
                 catch(Exception e)
                 {
@@ -83,7 +80,11 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
             }
             EzConfigGui.Init(UI.DrawMain);
-            EzCmd.Add("/db", OnCommand, Lang.CommandHelp);
+            EzCmd.Add("/db", OnCommand, "open the plugin settings\n" +
+                "/db apply → reapply rules immediately\n" +
+                "/db static <name> → mark preset as static\n" +
+                "/db dynamic → cancel static preset and use dynamic rules\n" +
+                "/db characterprofile <name> → changes profile of currently active character to provided profile");
             AgentMapInst = AgentMap.Instance();
             WeatherManager = new();
             new EzFrameworkUpdate(OnUpdate);
@@ -103,16 +104,15 @@ public unsafe class DynamicBridge : IDalamudPlugin
             PenumbraManager = new();
             MoodlesManager = new();
             HonorificManager = new();
-            SingletonServiceManager.Initialize(typeof(S));
         });
     }
 
     private void OnLogin()
     {
         C.SeenCharacters[Player.CID] = Player.NameWithWorld;
-        if (C.EnableGlamourer)
+        if(C.EnableGlamourer)
         {
-            if (P.GlamourerManager.Reflector.GetAutomationGlobalState() && P.GlamourerManager.Reflector.GetAutomationStatusForChara())
+            if(P.GlamourerManager.Reflector.GetAutomationGlobalState() && P.GlamourerManager.Reflector.GetAutomationStatusForChara())
             {
                 if(C.ManageGlamourerAutomation)
                 {
@@ -120,14 +120,14 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
                 else
                 {
-                    ChatPrinter.Orange(Lang.ChatNoticeGlamourerWarning);
+                    ChatPrinter.Orange("[DynamicBridge] Glamourer automation is enabled but DynamicBridge is not configured to work together with it. This will cause issues. Either disable Glamourer automation or configure DynamicBridge accordingly (/db - settings).");
                 }
             }
         }
 
         Utils.UpdateGearsetCache();
 
-        LastJob = Player.Object.ClassJob.Id;
+        LastJob = (uint)Player.Job;
         //LastGS = RaptureGearsetModule.Instance()->CurrentGearsetIndex;
     }
 
@@ -137,68 +137,68 @@ public unsafe class DynamicBridge : IDalamudPlugin
         {
             C.Debug = !C.Debug;
         }
-        else if (arguments.EqualsIgnoreCaseAny("apply", "a"))
+        else if(arguments.EqualsIgnoreCaseAny("apply", "a"))
         {
             ForceUpdate = true;
         }
-        else if (arguments.StartsWithAny(StringComparison.OrdinalIgnoreCase, "static", "s"))
+        else if(arguments.StartsWithAny(StringComparison.OrdinalIgnoreCase, "static", "s"))
         {
             Safe(() =>
             {
-                var name = arguments[(arguments.IndexOf(" ")+1)..];
+                var name = arguments[(arguments.IndexOf(" ") + 1)..];
                 var profile = Utils.Profile();
-                if (profile != null && profile.GetPresetsUnion().TryGetFirst(x => x.Name == name, out var p))
+                if(profile != null && profile.GetPresetsUnion().TryGetFirst(x => x.Name == name, out var p))
                 {
                     profile.GetPresetsUnion().Each(x => x.IsStatic = false);
                     p.IsStatic = true;
-                    Notify.Success(Lang.NotifyWasMadeStatic.Params(name));
+                    Notify.Success($"{name} was made static.");
                     P.ForceUpdate = true;
                 }
                 else
                 {
-                    Notify.Error(Lang.NoticeNotFound.Params(name));
+                    Notify.Error($"Could not find preset {name}.");
                 }
             });
         }
-        else if (arguments.EqualsIgnoreCaseAny("dynamic", "d"))
+        else if(arguments.EqualsIgnoreCaseAny("dynamic", "d"))
         {
             Safe(() =>
             {
                 var profile = Utils.Profile();
-                if (profile != null)
+                if(profile != null)
                 {
-                    profile.GetPresetsListUnion().Each(x => x.Each(z => z.IsStatic = false));
-                    Notify.Success(Lang.UsingDynamicRulesNow);
+                    profile.Presets.Each(x => x.IsStatic = false);
+                    Notify.Success($"Using dynamic rules now.");
                     P.ForceUpdate = true;
                 }
                 else
                 {
-                    Notify.Error(Lang.NoticeCharacterBlacklistedOrNotLoggedIn);
+                    Notify.Error($"Character blacklisted or not logged in.");
                 }
             });
         }
-        else if (arguments.StartsWithAny(StringComparison.OrdinalIgnoreCase, "characterprofile", "chp"))
+        else if(arguments.StartsWithAny(StringComparison.OrdinalIgnoreCase, "characterprofile", "chp"))
         {
             Safe(() =>
             {
                 var name = arguments[(arguments.IndexOf(" ") + 1)..];
                 var profile = C.ProfilesL.FirstOrDefault(p => p.Name == name);
 
-                if (profile != null)
+                if(profile != null)
                 {
-                    if (C.SeenCharacters.ContainsKey(Player.CID) && !C.Blacklist.Contains(Player.CID))
+                    if(C.SeenCharacters.ContainsKey(Player.CID) && !C.Blacklist.Contains(Player.CID))
                     {
                         profile.SetCharacter(Player.CID);
 
                     }
                     else
                     {
-                        Notify.Error(Lang.NotifyProfileSwapCharacterNotFoundOrBlacklisted);
+                        Notify.Error("Could not find valid Character based on your current Player ID.");
                     }
                 }
                 else
                 {
-                    Notify.Error(Lang.NoticeProfileSwapProfileNotFound.Params(name));
+                    Notify.Error($"Could not find profile {name}.");
                 }
             });
         }
@@ -208,13 +208,13 @@ public unsafe class DynamicBridge : IDalamudPlugin
         }
     }
 
-    void Logout()
+    private void Logout()
     {
         MyOldDesign = null;
-        if (C.EnableCustomize) TaskManager.Enqueue(() => CustomizePlusManager.RestoreState());
+        if(C.EnableCustomize) TaskManager.Enqueue(() => CustomizePlusManager.RestoreState());
         LastJob = 0;
         LastItems = [];
-        if (C.EnablePenumbra)
+        if(C.EnablePenumbra)
         {
             //PenumbraManager.UnsetAssignmentIfNeeded();
         }
@@ -223,13 +223,13 @@ public unsafe class DynamicBridge : IDalamudPlugin
 
     private void OnUpdate()
     {
-        if (Player.Interactable)
+        if(Player.Interactable)
         {
-            if (C.UpdateJobGSChange)
+            if(C.UpdateJobGSChange)
             {
-                if (LastJob != Player.Object.ClassJob.Id)
+                if(LastJob != Player.Object.ClassJob.RowId)
                 {
-                    LastJob = Player.Object.ClassJob.Id;
+                    LastJob = Player.Object.ClassJob.RowId;
                     ForceUpdate = true;
                 }
                 /*if (LastGS != RaptureGearsetModule.Instance()->CurrentGearsetIndex)
@@ -241,7 +241,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
             if(C.UpdateGearChange)
             {
                 var items = Utils.GetCurrentGear();
-                if (!LastItems.SequenceEqual(items))
+                if(!LastItems.SequenceEqual(items))
                 {
                     LastItems = items;
                     P.TaskManager.Enqueue(() => ForceUpdate = true);
@@ -249,21 +249,21 @@ public unsafe class DynamicBridge : IDalamudPlugin
             }
 
             var profile = Utils.GetProfileByCID(Player.CID);
-            if (!TaskManager.IsBusy && profile != null)
+            if(!TaskManager.IsBusy && profile != null)
             {
                 List<ApplyRule> newRule = [];
-                if (C.Enable)
+                if(C.Enable)
                 {
-                    if (profile.IsStaticExists())
+                    if(profile.IsStaticExists())
                     {
                         newRule = [StaticRule];
                         StaticRule.SelectedPresets = [profile.GetStaticPreset().Name];
                     }
                     else
                     {
-                        foreach (var x in profile.Rules)
+                        foreach(var x in profile.Rules)
                         {
-                            if (
+                            if(
                                 x.Enabled
                                 &&
                                 (!C.Cond_State || ((x.States.Count == 0 || x.States.Any(s => s.Check()))
@@ -293,59 +293,59 @@ public unsafe class DynamicBridge : IDalamudPlugin
                                 (!C.Cond_Time || ((x.Times.Count == 0 || x.Times.Contains(ETimeChecker.GetEorzeanTimeInterval()))
                                 && (!C.AllowNegativeConditions || !x.Not.Times.Contains(ETimeChecker.GetEorzeanTimeInterval()))))
                                 &&
-                                (!C.Cond_World || ((x.Worlds.Count == 0 || x.Worlds.Contains(Player.Object.CurrentWorld.Id))
-                                && (!C.AllowNegativeConditions || !x.Not.Worlds.Contains(Player.Object.CurrentWorld.Id))))
+                                (!C.Cond_World || ((x.Worlds.Count == 0 || x.Worlds.Contains(Player.Object.CurrentWorld.RowId))
+                                && (!C.AllowNegativeConditions || !x.Not.Worlds.Contains(Player.Object.CurrentWorld.RowId))))
                                 &&
                                 (!C.Cond_Gearset || ((x.Gearsets.Count == 0 || x.Gearsets.Contains(RaptureGearsetModule.Instance()->CurrentGearsetIndex))
                                 && (!C.AllowNegativeConditions || !x.Not.Gearsets.Contains(RaptureGearsetModule.Instance()->CurrentGearsetIndex))))
                                 )
                             {
                                 newRule.Add(x);
-                                if (!x.Passthrough) break;
+                                if(!x.Passthrough) break;
                             }
                         }
                     }
                 }
-                if (ForceUpdate || !Utils.GuidEquals(newRule, LastRule) || (SoftForceUpdate && newRule.Count > 0))
+                if(ForceUpdate || !Utils.GuidEquals(newRule, LastRule) || (SoftForceUpdate && newRule.Count > 0))
                 {
                     PluginLog.Debug($"Old rule: {LastRule.Print()}, new rule: {newRule.Print()} | {Utils.GuidEquals(newRule, LastRule)} | F:{ForceUpdate}");
                     LastRule = newRule;
                     ForceUpdate = false;
                     SoftForceUpdate = false;
-                    if (C.EnableMoodles) MoodlesManager.ResetCache();
+                    if(C.EnableMoodles) MoodlesManager.ResetCache();
                     var DoNullGlamourer = true;
                     var DoNullCustomize = true;
                     var DoNullHonorific = true;
                     var DoNullPenumbra = true;
                     HashSet<Guid> moodleCleanup = [];
-                    for (int i = 0; i < newRule.Count; i++)
+                    for(var i = 0; i < newRule.Count; i++)
                     {
                         var rule = newRule[i];
                         var isLast = i == newRule.Count - 1;
                         var isFirst = i == 0;
-                        if (rule != null && rule.SelectedPresets.Count > 0)
+                        if(rule != null && rule.SelectedPresets.Count > 0)
                         {
                             var index = Random.Next(0, rule.SelectedPresets.Count);
                             var preset = profile.GetPresetsUnion().FirstOrDefault(s => s.Name == rule.SelectedPresets[index]);
-                            if (preset != null)
+                            if(preset != null)
                             {
-                                if (C.EnablePenumbra)
+                                if(C.EnablePenumbra)
                                 {
                                     ApplyPresetPenumbra(preset, ref DoNullPenumbra);
                                 }
-                                if (C.EnableGlamourer)
+                                if(C.EnableGlamourer)
                                 {
                                     ApplyPresetGlamourer(preset, isFirst, ref DoNullGlamourer);
                                 }
-                                if (C.EnableHonorific)
+                                if(C.EnableHonorific)
                                 {
                                     ApplyPresetHonorific(preset, ref DoNullHonorific);
                                 }
-                                if (C.EnableCustomize)
+                                if(C.EnableCustomize)
                                 {
                                     ApplyPresetCustomize(preset, ref DoNullCustomize);
                                 }
-                                if (C.EnableMoodles)
+                                if(C.EnableMoodles)
                                 {
                                     ApplyPresetMoodles(preset, moodleCleanup);
                                 }
@@ -353,29 +353,29 @@ public unsafe class DynamicBridge : IDalamudPlugin
                         }
                     }
 
-                    if (DoNullPenumbra)
+                    if(DoNullPenumbra)
                     {
                         ApplyPresetPenumbra(profile.FallbackPreset, ref DoNullPenumbra);
-                        if (DoNullPenumbra) NullPenumbra();
+                        if(DoNullPenumbra) NullPenumbra();
                     }
-                    if (DoNullGlamourer)
+                    if(DoNullGlamourer)
                     {
                         ApplyPresetGlamourer(profile.FallbackPreset, true, ref DoNullGlamourer);
                         if(DoNullGlamourer) NullGlamourer();
                     }
-                    if (DoNullCustomize)
+                    if(DoNullCustomize)
                     {
                         ApplyPresetCustomize(profile.FallbackPreset, ref DoNullCustomize);
                         if(DoNullCustomize) NullCustomize();
                     }
-                    if (DoNullHonorific)
+                    if(DoNullHonorific)
                     {
                         ApplyPresetHonorific(profile.FallbackPreset, ref DoNullHonorific);
                         if(DoNullHonorific) NullHonorific();
                     }
                     foreach(var x in MoodleCleanupQueue)
                     {
-                        if (!moodleCleanup.Contains(x))
+                        if(!moodleCleanup.Contains(x))
                         {
                             if(MoodlesManager.GetMoodles().Any(z => z.ID == x))
                             {
@@ -391,34 +391,34 @@ public unsafe class DynamicBridge : IDalamudPlugin
 
                     void NullPenumbra()
                     {
-                        if (!C.EnablePenumbra) return;
+                        if(!C.EnablePenumbra) return;
                         PenumbraManager.UnsetAssignmentIfNeeded();
                     }
 
                     void NullHonorific()
                     {
-                        if (!C.EnableHonorific) return;
+                        if(!C.EnableHonorific) return;
                         TaskManager.Enqueue(Utils.WaitUntilInteractable);
-                        if (HonorificManager.WasSet) TaskManager.Enqueue(() => HonorificManager.SetTitle());
+                        if(HonorificManager.WasSet) TaskManager.Enqueue(() => HonorificManager.SetTitle());
                     }
 
                     void NullCustomize()
                     {
-                        if (!C.EnableCustomize) return;
+                        if(!C.EnableCustomize) return;
                         TaskManager.Enqueue(Utils.WaitUntilInteractable);
                         TaskManager.Enqueue(() => CustomizePlusManager.RestoreState());
                     }
 
                     void NullGlamourer()
                     {
-                        if (!C.EnableGlamourer) return;
-                        if (C.ManageGlamourerAutomation)
+                        if(!C.EnableGlamourer) return;
+                        if(C.ManageGlamourerAutomation)
                         {
                             TaskManager.Enqueue(() => GlamourerManager.Reflector.SetAutomationGlobalState(true), "GlamourerReflector.SetAutomationGlobalState = true");
                         }
-                        if (C.GlamNoRuleBehaviour == GlamourerNoRuleBehavior.StoreRestore)
+                        if(C.GlamNoRuleBehaviour == GlamourerNoRuleBehavior.StoreRestore)
                         {
-                            if (MyOldDesign != null)
+                            if(MyOldDesign != null)
                             {
                                 //TaskManager.DelayNext(DelayMS);
                                 TaskManager.Enqueue(Utils.WaitUntilInteractable);
@@ -437,9 +437,9 @@ public unsafe class DynamicBridge : IDalamudPlugin
                                 PluginLog.Debug($"No saved design found, reverting");
                             }
                         }
-                        else if (C.GlamNoRuleBehaviour == GlamourerNoRuleBehavior.RevertToAutomation)
+                        else if(C.GlamNoRuleBehaviour == GlamourerNoRuleBehavior.RevertToAutomation)
                         {
-                            if (C.RevertBeforeAutomationRestore)
+                            if(C.RevertBeforeAutomationRestore)
                             {
                                 TaskManager.Enqueue(Utils.WaitUntilInteractable);
                                 TaskManager.Enqueue(GlamourerManager.Revert);
@@ -448,7 +448,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
                             TaskManager.Enqueue(GlamourerManager.RevertToAutomation);
                             PluginLog.Debug($"Reverting to automation");
                         }
-                        else if (C.GlamNoRuleBehaviour == GlamourerNoRuleBehavior.RevertToNormal)
+                        else if(C.GlamNoRuleBehaviour == GlamourerNoRuleBehavior.RevertToNormal)
                         {
                             TaskManager.Enqueue(Utils.WaitUntilInteractable);
                             TaskManager.Enqueue(GlamourerManager.Revert);
@@ -458,29 +458,29 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
             }
 
-            if (Svc.Condition[ConditionFlag.LoggingOut])
+            if(Svc.Condition[ConditionFlag.LoggingOut])
             {
-                if (EzThrottler.Throttle("LogoutUpdateGS", 30000)) Utils.UpdateGearsetCache();
-                if (C.EnablePenumbra) PenumbraManager.UnsetAssignmentIfNeeded();
+                if(EzThrottler.Throttle("LogoutUpdateGS", 30000)) Utils.UpdateGearsetCache();
+                if(C.EnablePenumbra) PenumbraManager.UnsetAssignmentIfNeeded();
             }
         }
         else
         {
-            if (!Svc.ClientState.IsLoggedIn)
+            if(!Svc.ClientState.IsLoggedIn)
             {
                 ForceUpdate = true;
             }
         }
     }
 
-    void TerritoryChanged(ushort id)
+    private void TerritoryChanged(ushort id)
     {
         SoftForceUpdate = true;
     }
 
-    void ApplyPresetPenumbra(Preset preset, ref bool DoNullPenumbra)
+    private void ApplyPresetPenumbra(Preset preset, ref bool DoNullPenumbra)
     {
-    	if (preset.PenumbraType == SpecialPenumbraAssignment.移除独立分配)
+        if(preset.PenumbraType == SpecialPenumbraAssignment.移除独立分配)
         {
             PenumbraManager.SetAssignment("");
             DoNullPenumbra = false;
@@ -490,7 +490,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
         	PenumbraManager.SetAssignment("无");
             DoNullPenumbra = false;
         }
-        else if (preset.Penumbra.Count > 0)
+        else if(preset.Penumbra.Count > 0)
         {
             var randomAssignment = preset.Penumbra[Random.Next(preset.Penumbra.Count)];
             PenumbraManager.SetAssignment(randomAssignment);
@@ -498,42 +498,42 @@ public unsafe class DynamicBridge : IDalamudPlugin
         }
     }
 
-    void ApplyPresetGlamourer(Preset preset, bool isFirst, ref bool DoNullGlamourer)
+    private void ApplyPresetGlamourer(Preset preset, bool isFirst, ref bool DoNullGlamourer)
     {
-        if (preset.Glamourer.Count > 0 || preset.ComplexGlamourer.Count > 0)
+        if(preset.Glamourer.Count > 0 || preset.ComplexGlamourer.Count > 0)
         {
             var selectedIndex = Random.Shared.Next(0, preset.Glamourer.Count + preset.ComplexGlamourer.Count);
             var designs = new List<string>();
-            if (selectedIndex < preset.Glamourer.Count)
+            if(selectedIndex < preset.Glamourer.Count)
             {
                 designs.Add(preset.Glamourer[selectedIndex]);
             }
             else
             {
                 var complexEntry = C.ComplexGlamourerEntries.FirstOrDefault(x => x.Name == preset.ComplexGlamourer[selectedIndex - preset.Glamourer.Count]);
-                if (complexEntry != null)
+                if(complexEntry != null)
                 {
-                    foreach (var e in complexEntry.Designs)
+                    foreach(var e in complexEntry.Designs)
                     {
                         designs.Add(e);
                     }
                 }
             }
-            foreach (var name in designs)
+            foreach(var name in designs)
             {
                 var design = Utils.GetDesignByGUID(name);
-                if (design != null)
+                if(design != null)
                 {
                     DoNullGlamourer = false;
-                    if (isFirst) MyOldDesign ??= GlamourerManager.GetMyCustomization();
+                    if(isFirst) MyOldDesign ??= GlamourerManager.GetMyCustomization();
                     //TaskManager.DelayNext(60, true);
-                    if (isFirst)
+                    if(isFirst)
                     {
-                        if (C.ManageGlamourerAutomation)
+                        if(C.ManageGlamourerAutomation)
                         {
                             TaskManager.Enqueue(() => GlamourerManager.Reflector.SetAutomationGlobalState(false), "GlamourerReflector.SetAutomationGlobalState = false");
                         }
-                        if (C.RevertGlamourerBeforeApply)
+                        if(C.RevertGlamourerBeforeApply)
                         {
                             TaskManager.Enqueue(GlamourerManager.Revert, "Revert character");
                         }
@@ -546,10 +546,10 @@ public unsafe class DynamicBridge : IDalamudPlugin
         }
     }
 
-    void ApplyPresetHonorific(Preset preset, ref bool DoNullHonorific)
+    private void ApplyPresetHonorific(Preset preset, ref bool DoNullHonorific)
     {
         var hfiltered = preset.HonorificFiltered().ToArray();
-        if (hfiltered.Length > 0)
+        if(hfiltered.Length > 0)
         {
             DoNullHonorific = false;
             var randomTitle = hfiltered[Random.Next(hfiltered.Length)];
@@ -558,10 +558,10 @@ public unsafe class DynamicBridge : IDalamudPlugin
         }
     }
 
-    void ApplyPresetCustomize(Preset preset, ref bool DoNullCustomize)
+    private void ApplyPresetCustomize(Preset preset, ref bool DoNullCustomize)
     {
         var cfiltered = preset.CustomizeFiltered().ToArray();
-        if (cfiltered.Length > 0)
+        if(cfiltered.Length > 0)
         {
             DoNullCustomize = false;
             var randomCusProfile = cfiltered[Random.Next(cfiltered.Length)];
@@ -570,12 +570,12 @@ public unsafe class DynamicBridge : IDalamudPlugin
         }
     }
 
-    void ApplyPresetMoodles(Preset preset, HashSet<Guid> moodleCleanup)
-    { 
+    private void ApplyPresetMoodles(Preset preset, HashSet<Guid> moodleCleanup)
+    {
         MoodlesManager.ResetCache();
         foreach(var x in preset.Moodles)
         {
-            if (MoodlesManager.GetMoodles().TryGetFirst(z => z.ID == x.Guid, out var m))
+            if(MoodlesManager.GetMoodles().TryGetFirst(z => z.ID == x.Guid, out var m))
             {
                 PluginLog.Debug($"Applying Moodle {m}");
                 MoodlesManager.ApplyMoodle(x.Guid);
@@ -585,7 +585,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
             {
                 PluginLog.Debug($"Applying Moodle preset {mp}");
                 MoodlesManager.ApplyPreset(x.Guid);
-                if (x.Cancel) moodleCleanup.Add(x.Guid);
+                if(x.Cancel) moodleCleanup.Add(x.Guid);
             }
         }
     }
@@ -594,7 +594,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
     {
         Memory.Dispose();
         ECommonsMain.Dispose();
-        P = null; 
+        P = null;
         C = null;
     }
 }
