@@ -13,31 +13,31 @@ public static class GuiSettings
 {
     public static Dictionary<GlamourerNoRuleBehavior, string> GlamourerNoRuleBehaviorNames = new()
     {
-        [GlamourerNoRuleBehavior.RevertToNormal] = "Revert to game state",
-        [GlamourerNoRuleBehavior.RevertToAutomation] = "Revert to Glamourer's automation",
-        [GlamourerNoRuleBehavior.StoreRestore] = "[Beta] Restore appearance as it was before applying rule",
+        [GlamourerNoRuleBehavior.RevertToNormal] = "恢复到游戏状态",
+        [GlamourerNoRuleBehavior.RevertToAutomation] = "恢复到Glamourer的自动执行",
+        [GlamourerNoRuleBehavior.StoreRestore] = "[Beta] 恢复到应用规则前的外观",
     };
 
     public static Dictionary<ImGuiComboFlags, string> ComboFlagNames = new()
     {
-        [ImGuiComboFlags.HeightSmall] = "Small",
-        [ImGuiComboFlags.HeightRegular] = "Standard",
-        [ImGuiComboFlags.HeightLarge] = "Large",
-        [ImGuiComboFlags.HeightLargest] = "Maximum possible",
+        [ImGuiComboFlags.HeightSmall] = "小",
+        [ImGuiComboFlags.HeightRegular] = "标准",
+        [ImGuiComboFlags.HeightLarge] = "大",
+        [ImGuiComboFlags.HeightLargest] = "尽可能最大",
     };
 
     public static void Draw()
     {
-        ImGui.Checkbox($"Enable Plugin", ref C.Enable);
-        if(ImGuiGroup.BeginGroupBox("General"))
+        ImGui.Checkbox($"启用插件", ref C.Enable);
+        if(ImGuiGroup.BeginGroupBox("常规"))
         {
-            ImGuiEx.CheckboxInverted("Hide tutorial", ref C.ShowTutorial);
-            ImGui.Checkbox($"Allow applying negative conditions", ref C.AllowNegativeConditions);
-            ImGuiEx.HelpMarker("If you will enable this option, you will be able to mark any condition with cross marker. If any condition marked with cross within the rule is matching, that entire rule is ignored.");
-            ImGui.Checkbox("Display full path in profile editor, where available", ref C.GlamourerFullPath);
-            ImGuiEx.SetNextItemWidthScaled(150f);
-            ImGuiEx.EnumCombo("Dropdown menu size", ref C.ComboSize, ComboFlagNames.ContainsKey, ComboFlagNames);
-            if(ImGui.Checkbox($"Force update appearance on job and gearset changes", ref C.UpdateJobGSChange))
+            ImGuiEx.CheckboxInverted("隐藏教程", ref C.ShowTutorial);
+            ImGui.Checkbox($"允许使用否定条件", ref C.AllowNegativeConditions);
+            ImGuiEx.HelpMarker("如果启用此选项，你可以使用×标记任何条件。如果一条动态规则中匹配到任何×标的条件，则忽略整条规则。");
+            ImGui.Checkbox("在预设编辑器中显示Glamourer角色设计的完整路径（如果有）。", ref C.GlamourerFullPath);
+            ImGuiEx.SetNextItemWidthScaled(50f);
+            ImGuiEx.EnumCombo("下拉菜单尺寸", ref C.ComboSize, ComboFlagNames.ContainsKey, ComboFlagNames);
+            if(ImGui.Checkbox($"在职业或套装改变时强制更新外观。", ref C.UpdateJobGSChange))
             {
                 if(C.UpdateJobGSChange)
                 {
@@ -51,53 +51,53 @@ public static class GuiSettings
             /*ImGui.Checkbox($"Force update appearance on manual gear changes", ref C.UpdateGearChange);
             ImGuiEx.HelpMarker("This option impacts performance", EColor.OrangeBright, FontAwesomeIcon.ExclamationTriangle.ToIconString());*/
             ImGui.Separator();
-            ImGui.Checkbox($"[Beta] Enable Incognito Mode (WORK IN PROGRESS, ONLY HIDES IN SOME PLACES YET)", ref C.NoNames);
-            ImGuiEx.HelpMarker($"Replaces your character name with random animal name and your world name with random fantasy world name. Same name will always generate same counterparts, for you but not for other people. Additionally, hides text in input fields and shows temporary profile/preset ID instead of name.");
-            ImGuiEx.HelpMarker($"Warning! No names will be censored in Log and Debug tabs and Dalamud.log! \nWarning! If you share configuration file AND censored name, original name CAN BE RESTORED. If you need to send configuration file and ensure that you remain anonymous, click Regenerate Censor Seed button, send configuration and click the button again.", ImGuiColors.DalamudOrange);
+            ImGui.Checkbox($"[Beta]启用匿名模式（正在开发，仅在某些位置匿名）", ref C.NoNames);
+            ImGuiEx.HelpMarker($"将角色名称替换为随机动物名称，将服务器名称替换为任意幻想世界名称。相同的对象总是会产生相同的名字，对你来说是这样，但对其他人来说却不是。此外，隐藏输入字段中的文本，并显示临时配置文件/预设ID来代替。");
+            ImGuiEx.HelpMarker($"警告！在日志和调试选项卡以及卫月日志中仍会显示真实名称！\n警告！如果要分享配置文件并且启用了匿名，拿到文件的人[可以恢复真实名称]。如果你需要向他人发送配置文件并保持匿名状态，请单击“重新生成匿名种子”按钮，发送配置文件，并再次单击该按钮。", ImGuiColors.DalamudOrange);
             ImGuiEx.Spacing();
-            ImGui.Checkbox($"Use only replacement words with same first letter as original when possible.", ref C.LesserCensor);
+            ImGui.Checkbox($"尽可能只使用首字母替换原文字。", ref C.LesserCensor);
             ImGuiEx.Spacing();
-            if(ImGui.Button("Regenerate Censor Seed"))
+            if (ImGui.Button("重新生成匿名种子"))
             {
                 C.CensorSeed = Guid.NewGuid().ToString();
             }
-            ImGuiEx.HelpMarker($"Censored names will change upon pressing this button.");
+            ImGuiEx.HelpMarker($"按下此按钮后，隐匿的名称将发生更改。");
 
-            ImGuiEx.CheckboxInverted($"Split base classes and jobs", ref C.UnifyJobs);
+            ImGuiEx.CheckboxInverted($"拆分职业类型和职业", ref C.UnifyJobs);
 
-            ImGui.Checkbox("Autofill empty preset name with first selected plugin's option name upon selecting it", ref C.AutofillFromGlam);
+            ImGui.Checkbox("选择后，自动使用第一个选定插件的选项名称填充空预设名称", ref C.AutofillFromGlam);
             ImGuiGroup.EndGroupBox();
         }
 
-        if(ImGuiGroup.BeginGroupBox("Configure rule conditions"))
+        if(ImGuiGroup.BeginGroupBox("配置规则条件"))
         {
-            ImGuiEx.TextWrapped($"Enable extra conditions or disable unused for convenience and performance boost.");
+            ImGuiEx.TextWrapped($"在动态规则里启用或禁用条件选项，以优化使用体验并提高性能。");
             ImGuiEx.EzTableColumns("extras", [
-                () => ImGui.Checkbox($"State", ref C.Cond_State),
-                () => ImGui.Checkbox($"Biome", ref C.Cond_Biome),
-                () => ImGui.Checkbox($"Weather", ref C.Cond_Weather),
-                () => ImGui.Checkbox($"Time", ref C.Cond_Time),
-                () => ImGui.Checkbox($"Zone group", ref C.Cond_ZoneGroup),
-                () => ImGui.Checkbox($"Zone", ref C.Cond_Zone),
-                () => ImGui.Checkbox($"House", ref C.Cond_House),
-                () => ImGui.Checkbox($"Emote", ref C.Cond_Emote),
-                () => ImGui.Checkbox($"Job", ref C.Cond_Job),
-                () => ImGui.Checkbox($"World", ref C.Cond_World),
-                () => ImGui.Checkbox($"Gearset", ref C.Cond_Gearset),
+                () => ImGui.Checkbox($"状态", ref C.Cond_State),
+                () => ImGui.Checkbox($"生物群系", ref C.Cond_Biome),
+                () => ImGui.Checkbox($"天气", ref C.Cond_Weather),
+                () => ImGui.Checkbox($"时间", ref C.Cond_Time),
+                () => ImGui.Checkbox($"区域类型", ref C.Cond_ZoneGroup),
+                () => ImGui.Checkbox($"区域", ref C.Cond_Zone),
+                () => ImGui.Checkbox($"住宅", ref C.Cond_House),
+                () => ImGui.Checkbox($"情感动作", ref C.Cond_Emote),
+                () => ImGui.Checkbox($"职业", ref C.Cond_Job),
+                () => ImGui.Checkbox($"服务器", ref C.Cond_World),
+                () => ImGui.Checkbox($"套装模板", ref C.Cond_Gearset),
             ],
                 (int)(ImGui.GetContentRegionAvail().X / 180f), ImGuiTableFlags.BordersInner);
             ImGuiGroup.EndGroupBox();
         }
 
-        if(ImGuiGroup.BeginGroupBox("Integrations"))
+        if(ImGuiGroup.BeginGroupBox("集成"))
         {
-            ImGuiEx.Text($"Here you can individually enable/disable plugin integrations and configure appropriate related settings.");
+            ImGuiEx.Text($"在此处，您可以单独启用/禁用插件集成，并配置相关设置。");
             //glam
 
             ImGui.Checkbox("Glamourer", ref C.EnableGlamourer);
             DrawPluginCheck("Glamourer", "1.2.2.2");
             ImGuiEx.Spacing();
-            ImGuiEx.TextV($"DynamicBridge behavior when no Glamourer rule is found:");
+            ImGuiEx.TextV($"未找到Glamourer规则时，DynamicBridge的行为：");
             ImGui.SameLine();
             ImGuiEx.Spacing();
             ImGuiEx.SetNextItemWidthScaled(200f);
@@ -106,23 +106,23 @@ public static class GuiSettings
             {
                 if(C.GlamNoRuleBehaviour != GlamourerNoRuleBehavior.RevertToAutomation)
                 {
-                    ImGuiEx.HelpMarker("Revert to Automation is recommended if you are using Glamourer automation.", ImGuiColors.DalamudRed, FontAwesomeIcon.ExclamationTriangle.ToIconString());
+                    ImGuiEx.HelpMarker("如果您正在使用 Glamourer 的自动执行，建议选择“恢复到 Glamourer 的自动执行”。", ImGuiColors.DalamudRed, FontAwesomeIcon.ExclamationTriangle.ToIconString());
                 }
             }
             ImGuiEx.Spacing();
-            ImGui.Checkbox("Allow DynamicBridge to manage Glamourer's automation setting", ref C.ManageGlamourerAutomation);
-            ImGuiEx.HelpMarker("If this setting is enabled, Glamourer's global automation setting will be automatically disabled upon applying any rule and will be automatically enabled when no rules are found.");
+            ImGui.Checkbox("允许 DynamicBridge 管理 Glamourer 的自动执行设置", ref C.ManageGlamourerAutomation);
+            ImGuiEx.HelpMarker("如果启用此设置，Glamourer 的全局自动执行将在应用任何规则时自动禁用，并在找不到规则时自动启用。");
             if(P.GlamourerManager.Reflector.GetAutomationGlobalState() && P.GlamourerManager.Reflector.GetAutomationStatusForChara())
             {
                 if(!C.ManageGlamourerAutomation)
                 {
-                    ImGuiEx.HelpMarker("You MUST enable this setting or disable Glamourer's automation, otherwise either Glamourer's or DynamicBridge's automation will not work correctly.", ImGuiColors.DalamudRed, FontAwesomeIcon.ExclamationTriangle.ToIconString());
+                    ImGuiEx.HelpMarker("您【必须】启用此设置或禁用Glamourer的自动执行，否则Glamourer或DynamicBridge的动态规则将无法正常工作。", ImGuiColors.DalamudRed, FontAwesomeIcon.ExclamationTriangle.ToIconString());
                 }
             }
             ImGuiEx.Spacing();
-            ImGui.Checkbox("Revert character before restoring automation", ref C.RevertBeforeAutomationRestore);
+            ImGui.Checkbox("在恢复自动执行前还原角色", ref C.RevertBeforeAutomationRestore);
             ImGuiEx.Spacing();
-            ImGui.Checkbox("Revert character before applying rule", ref C.RevertGlamourerBeforeApply);
+            ImGui.Checkbox("在应用规则前还原角色", ref C.RevertGlamourerBeforeApply);
 
 
             ImGui.Separator();
@@ -137,7 +137,7 @@ public static class GuiSettings
             ImGui.Checkbox("Honorific", ref C.EnableHonorific);
             DrawPluginCheck("Honorific", "1.4.2.0");
             ImGuiEx.Spacing();
-            ImGui.Checkbox($"Allow selecting titles registered for other characters", ref C.HonotificUnfiltered);
+            ImGui.Checkbox($"允许选择为其他角色添加的称号", ref C.HonotificUnfiltered);
 
             //penumbra
             ImGui.Checkbox("Penumbra", ref C.EnablePenumbra);
@@ -150,7 +150,7 @@ public static class GuiSettings
             ImGuiGroup.EndGroupBox();
         }
 
-        if(ImGuiGroup.BeginGroupBox("About"))
+        if (ImGuiGroup.BeginGroupBox("关于"))
         {
             GuiAbout.Draw();
             ImGuiGroup.EndGroupBox();
@@ -167,7 +167,7 @@ public static class GuiSettings
             ImGuiEx.Text(EColor.RedBright, "\uf00d");
             ImGui.PopFont();
             ImGui.SameLine();
-            ImGuiEx.Text($"not installed");
+            ImGuiEx.Text($"未安装");
         }
         else
         {
@@ -177,7 +177,7 @@ public static class GuiSettings
                 ImGuiEx.Text(EColor.RedBright, "\uf00d");
                 ImGui.PopFont();
                 ImGui.SameLine();
-                ImGuiEx.Text($"unsupported version");
+                ImGuiEx.Text($"不支持的版本");
             }
             else
             {

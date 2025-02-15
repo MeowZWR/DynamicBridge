@@ -343,10 +343,10 @@ namespace DynamicBridge
             FullList = list.Select(x => x.ToString()).Join("\n");
             if(notList.Length > 0)
             {
-                FullList += "\nMeeting any of these condition will make rule invalid:\n";
+                FullList += "\n满足以下任何条件都将使规则无效：\n";
                 FullList += notList.Select(x => x.ToString()).Join("\n");
             }
-            return $"{list.Length} | {notList.Length} selected";
+            return $"{list.Length} | {notList.Length} 已选中";
         }
 
         public static List<uint> GetArmor()

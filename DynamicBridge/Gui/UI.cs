@@ -20,19 +20,19 @@ public static unsafe class UI
 
     public static Profile SelectedProfile = null;
     public static Profile Profile => SelectedProfile ?? Utils.GetProfileByCID(Player.CID);
-    public const string RandomNotice = "Will be randomly selected between:\n";
-    public const string AnyNotice = "Meeting any of the following conditions will result in rule being triggered:\n";
+    public const string RandomNotice = "将在以下选项中随机选择：\n";
+    public const string AnyNotice = "满足以下任何条件都将触发规则：\n";
     private static string PSelFilter = "";
     public static string RequestTab = null;
 
     public static void DrawMain()
     {
         var resolution = "";
-        if(Player.CID == 0) resolution = "Not logged in";
-        else if(C.Blacklist.Contains(Player.CID)) resolution = "Character blacklisted";
-        else if(Utils.GetProfileByCID(Player.CID) == null) resolution = "No associated profile";
+        if(Player.CID == 0) resolution = "未登录";
+        else if(C.Blacklist.Contains(Player.CID)) resolution = "角色已列入黑名单";
+        else if(Utils.GetProfileByCID(Player.CID) == null) resolution = "没有关联的配置文件";
         else resolution = $"Profile {Utils.GetProfileByCID(Player.CID).CensoredName}";
-        if(!C.Enable && Environment.TickCount64 % 2000 > 1000) resolution = "PLUGIN DISABLED BY SETTINGS";
+        if(!C.Enable && Environment.TickCount64 % 2000 > 1000) resolution = "插件已被设置禁用";
         EzConfigGui.Window.WindowName = $"{DalamudReflector.GetPluginName()} v{P.GetType().Assembly.GetName().Version} [{resolution}]###{DalamudReflector.GetPluginName()}";
         if(ImGui.IsWindowAppearing())
         {
@@ -43,15 +43,15 @@ public static unsafe class UI
         PatreonBanner.DrawRight();
         ImGuiEx.EzTabBar("TabsNR2", PatreonBanner.Text, RequestTab, ImGuiTabBarFlags.Reorderable, [
             //("Settings", Settings, null, true),
-            (C.ShowTutorial?"Tutorial":null, GuiTutorial.Draw, null, true),
-            ("Dynamic Rules", GuiRules.Draw, Colors.TabGreen, true),
-            ("Presets", GuiPresets.DrawUser, Colors.TabGreen, true),
-            ("Global Presets", GuiPresets.DrawGlobal, Colors.TabYellow, true),
-            ("Layered Designs", ComplexGlamourer.Draw, Colors.TabPurple, true),
-            ("House Registration", HouseReg.Draw, Colors.TabPurple, true),
-            ("Profiles", GuiProfiles.Draw, Colors.TabBlue, true),
-            ("Characters", GuiCharacters.Draw, Colors.TabBlue, true),
-            ("Settings", GuiSettings.Draw, null, true),
+            (C.ShowTutorial?"教程":null, GuiTutorial.Draw, null, true),
+            ("动态规则", GuiRules.Draw, Colors.TabGreen, true),
+            ("独立预设", GuiPresets.DrawUser, Colors.TabGreen, true),
+            ("全局预设", GuiPresets.DrawGlobal, Colors.TabYellow, true),
+            ("层组设计", ComplexGlamourer.Draw, Colors.TabPurple, true),
+            ("住宅登记", HouseReg.Draw, Colors.TabPurple, true),
+            ("配置文件", GuiProfiles.Draw, Colors.TabBlue, true),
+            ("角色管理", GuiCharacters.Draw, Colors.TabBlue, true),
+            ("插件设置", GuiSettings.Draw, null, true),
             InternalLog.ImGuiTab(),
             (C.Debug?"调试":null, Debug.Draw, ImGuiColors.DalamudGrey3, true),
             ]);
@@ -71,19 +71,19 @@ public static unsafe class UI
             {
                 if(C.Blacklist.Contains(Player.CID))
                 {
-                    ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("blisted", $"\"{Censor.Character(Player.NameWithWorld)}\" is blacklisted. Select another profile to edit it.", ProfileSelectable), () =>
+                    ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("blisted", $"\"{Censor.Character(Player.NameWithWorld)}\" 已被列入黑名单。选择另一个配置文件进行编辑。", ProfileSelectable), () =>
                     {
                         after?.Invoke();
                         if(ImGuiEx.IconButton(FontAwesomeIcon.ArrowCircleUp))
                         {
                             C.Blacklist.Remove(Player.CID);
                         }
-                        ImGuiEx.Tooltip("Unblacklist this character.");
+                        ImGuiEx.Tooltip("将该角色移出黑名单。");
                     });
                 }
                 else if(Player.CID != 0)
                 {
-                    ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("noprofile", $"\"{Censor.Character(Player.NameWithWorld)}\" has no associated profile. Select other profile to edit or associate profile in Characters tab.", ProfileSelectable), () =>
+                    ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("noprofile", $"\"{Censor.Character(Player.NameWithWorld)}\" 没有关联的配置文件。选择其他配置文件进行编辑或在“角色管理”选项卡中进行关联。", ProfileSelectable), () =>
                     {
                         after?.Invoke();
                         if(ImGuiEx.IconButton(FontAwesomeIcon.PlusCircle))
@@ -91,14 +91,14 @@ public static unsafe class UI
                             var profile = new Profile();
                             C.ProfilesL.Add(profile);
                             profile.Characters = [Player.CID];
-                            profile.Name = $"Autogenerated Profile for {Player.Name}";
+                            profile.Name = $"为{Player.Name}自动生成的配置文件";
                         }
-                        ImGuiEx.Tooltip($"Create new empty profile and assign it to current character");
+                        ImGuiEx.Tooltip($"创建新的空白配置文件并将其分配给当前角色");
                     });
                 }
                 else
                 {
-                    ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("nlg", $"You are not logged in. Please select profile to edit.", ProfileSelectable), () =>
+                    ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("nlg", $"您尚未登录。请选择要编辑的配置文件。", ProfileSelectable), () =>
                     {
                         after?.Invoke();
                         ImGui.Dummy(Vector2.Zero);
@@ -118,7 +118,7 @@ public static unsafe class UI
             }
             else
             {
-                ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("EditNotify", $"You are editing profile \"{SelectedProfile.CensoredName}\". " + (Player.Available ? $"It is not used by \"{Censor.Character(Player.NameWithWorld)}\"." : ""), ProfileSelectable, EColor.YellowDark), () =>
+                ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("EditNotify", $"您正在编辑配置文件[{SelectedProfile.CensoredName}]。" + (Player.Available?$"它未被[{Censor.Character(Player.NameWithWorld)}]使用。":""), ProfileSelectable, EColor.YellowDark), () =>
                 {
                     after?.Invoke();
                     if(!C.Blacklist.Contains(Player.CID))
@@ -127,11 +127,11 @@ public static unsafe class UI
                         {
                             new TickScheduler(() => SelectedProfile.SetCharacter(Player.CID));
                         }
-                        ImGuiEx.Tooltip($"分配配置文件 {SelectedProfile?.CensoredName} 给 {Censor.Character(Player.NameWithWorld)}");
+                        ImGuiEx.Tooltip($"分配配置文件“{SelectedProfile?.CensoredName}”给“{Censor.Character(Player.NameWithWorld)}”");
                     }
                     else
                     {
-                        ImGuiEx.HelpMarker("Your current character is blacklisted", null, FontAwesomeIcon.ExclamationTriangle.ToIconString());
+                        ImGuiEx.HelpMarker("您当前的角色已列入黑名单", null, FontAwesomeIcon.ExclamationTriangle.ToIconString());
                     }
                 });
             }
@@ -139,26 +139,26 @@ public static unsafe class UI
 
         void UsedByCurrent()
         {
-            ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("EditNotify", $"You are editing profile \"{currentCharaProfile.CensoredName}\" which is used by \"{Censor.Character(Player.NameWithWorld)}\".", ProfileSelectable, EColor.GreenDark), () =>
+            ImGuiEx.InputWithRightButtonsArea(() => Utils.BannerCombo("EditNotify", $"您正在编辑配置文件“{currentCharaProfile.CensoredName}”，它被用于“{Censor.Character(Player.NameWithWorld)}”。", ProfileSelectable, EColor.GreenDark), () =>
             {
                 after?.Invoke();
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Unlink, enabled: ImGuiEx.Ctrl))
                 {
                     new TickScheduler(() => currentCharaProfile.Characters.Remove(Player.CID));
                 }
-                ImGuiEx.Tooltip($"Hold CTRL key and click to unassign profile {currentCharaProfile?.CensoredName} from {Censor.Character(Player.NameWithWorld)}.");
+                ImGuiEx.Tooltip($"按住CTRL键并点击来取消分配配置文件“{currentCharaProfile?.CensoredName}”给“{Censor.Character(Player.NameWithWorld)}”。");
             });
         }
 
         void ProfileSelectable()
         {
-            if(ImGui.Selectable("- Current character -", SelectedProfile == null))
+            if(ImGui.Selectable("- 当前角色 -", SelectedProfile == null))
             {
                 SelectedProfile = null;
             }
             ImGui.Separator();
             ImGuiEx.SetNextItemWidthScaled(150f);
-            ImGui.InputTextWithHint($"##SearchCombo", "Filter...", ref PSelFilter, 50, Utils.CensorFlags);
+            ImGui.InputTextWithHint($"##SearchCombo", "筛选...", ref PSelFilter, 50, Utils.CensorFlags);
             foreach(var x in C.ProfilesL)
             {
                 if(PSelFilter.Length > 0 && !x.Name.Contains(PSelFilter, StringComparison.OrdinalIgnoreCase)) continue;
@@ -177,6 +177,6 @@ public static unsafe class UI
         {
             P.ForceUpdate = true;
         }
-        ImGuiEx.Tooltip("Force update your character, reapplying all rules and resets");
+        ImGuiEx.Tooltip("强制更新角色，重新应用所有规则并重置");
     }
 }

@@ -12,14 +12,14 @@ namespace DynamicBridge.Gui
     {
         public static void Draw()
         {
-            ImGuiEx.TextWrapped($"Here you can register a house. After registration, you will be able to select it as a condition in Dynamic Rules tab.");
+            ImGuiEx.TextWrapped($"在此处，您可以登记住宅。登记后可以在“动态规则”选项卡中选择它作为条件。");
             var CurrentHouse = HousingManager.Instance()->GetCurrentHouseId();
             if(CurrentHouse > 0)
             {
-                ImGuiEx.Text($"Current house: {Censor.Hide($"{CurrentHouse:X16}")}");
-                if(!C.Houses.TryGetFirst(x => x.ID == CurrentHouse, out var record))
+                ImGuiEx.Text($"当前住宅：{Censor.Hide($"{CurrentHouse:X16}")}");
+                if (!C.Houses.TryGetFirst(x => x.ID == CurrentHouse, out var record))
                 {
-                    if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Home, "Register this house"))
+                    if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Home, "登记此住宅"))
                     {
                         C.Houses.Add(new() { ID = CurrentHouse, Name = Utils.GetHouseDefaultName() });
                     }
@@ -27,11 +27,11 @@ namespace DynamicBridge.Gui
             }
             else
             {
-                ImGuiEx.Text($"You are not in house");
+                ImGuiEx.Text($"您未处于住宅中");
             }
             if(ImGui.BeginTable("##houses", 3, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("名称", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableSetupColumn("ID");
                 ImGui.TableSetupColumn(" ");
                 ImGui.TableHeadersRow();
@@ -55,7 +55,7 @@ namespace DynamicBridge.Gui
                     {
                         new TickScheduler(() => C.Houses.RemoveAll(z => z.GUID == x.GUID));
                     }
-                    ImGuiEx.Tooltip($"Hold CTRL+Click to delete");
+                    ImGuiEx.Tooltip($"按住CTRL+点击来删除");
 
                     if(col) ImGui.PopStyleColor();
                     ImGui.PopID();

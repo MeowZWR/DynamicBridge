@@ -39,9 +39,9 @@ namespace DynamicBridge.Gui
                     {
                         Profile.Rules.Add(new());
                     }
-                    ImGuiEx.Tooltip("Add new rule");
+                    ImGuiEx.Tooltip("添加新规则");
                     ImGui.SameLine();
-                    if(ImGuiEx.IconButton(FontAwesomeIcon.Paste, "Paste rule from Clipboard"))
+                    if(ImGuiEx.IconButton(FontAwesomeIcon.Paste, "从剪切板粘贴规则"))
                     {
                         try
                         {
@@ -49,12 +49,12 @@ namespace DynamicBridge.Gui
                         }
                         catch(Exception e)
                         {
-                            Notify.Error("Failed to paste from clipboard:\n" + e.Message);
+                            Notify.Error("无法从剪贴板粘贴：\n" + e.Message);
                         }
                     }
                     if(Profile.IsStaticExists())
                     {
-                        ImGuiEx.HelpMarker($"Preset {Profile.GetStaticPreset()?.CensoredName} is selected as static. Automation disabled.", GradientColor.Get(EColor.RedBright, EColor.YellowBright, 1000), FontAwesomeIcon.ExclamationTriangle.ToIconString());
+                        ImGuiEx.HelpMarker($"预设 {Profile.GetStaticPreset()?.CensoredName} 已被设置为静态。动态规则自动执行已禁用。", GradientColor.Get(EColor.RedBright, EColor.YellowBright, 1000), FontAwesomeIcon.ExclamationTriangle.ToIconString());
                     }
                     ImGui.SameLine();
                 }
@@ -86,18 +86,18 @@ namespace DynamicBridge.Gui
                 if(ImGui.BeginTable("##main", 3 + active.Count(x => x), ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable | ImGuiTableFlags.Reorderable))
                 {
                     ImGui.TableSetupColumn("  ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
-                    if(C.Cond_State) ImGui.TableSetupColumn("State");
-                    if(C.Cond_Biome) ImGui.TableSetupColumn("Biome");
-                    if(C.Cond_Weather) ImGui.TableSetupColumn("Weather");
-                    if(C.Cond_Time) ImGui.TableSetupColumn("Time");
-                    if(C.Cond_ZoneGroup) ImGui.TableSetupColumn("Zone Group");
-                    if(C.Cond_Zone) ImGui.TableSetupColumn("Zone");
-                    if(C.Cond_House) ImGui.TableSetupColumn("House");
-                    if(C.Cond_Emote) ImGui.TableSetupColumn("Emote");
-                    if(C.Cond_Job) ImGui.TableSetupColumn("Job");
-                    if(C.Cond_World) ImGui.TableSetupColumn("World");
-                    if(C.Cond_Gearset) ImGui.TableSetupColumn("Gearset");
-                    ImGui.TableSetupColumn("Preset");
+                    if(C.Cond_State) ImGui.TableSetupColumn("状态");
+                    if(C.Cond_Biome) ImGui.TableSetupColumn("生物群系");
+                    if(C.Cond_Weather) ImGui.TableSetupColumn("天气");
+                    if(C.Cond_Time) ImGui.TableSetupColumn("时间");
+                    if(C.Cond_ZoneGroup) ImGui.TableSetupColumn("区域类型");
+                    if(C.Cond_Zone) ImGui.TableSetupColumn("区域");
+                    if(C.Cond_House) ImGui.TableSetupColumn("住宅");
+                    if(C.Cond_Emote) ImGui.TableSetupColumn("情感动作");
+                    if(C.Cond_Job) ImGui.TableSetupColumn("职业");
+                    if(C.Cond_World) ImGui.TableSetupColumn("服务器");
+                    if(C.Cond_Gearset) ImGui.TableSetupColumn("套装");
+                    ImGui.TableSetupColumn("预设");
                     ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
                     ImGui.TableHeadersRow();
 
@@ -108,8 +108,8 @@ namespace DynamicBridge.Gui
                         {
                             ImGui.SetWindowFontScale(0.8f);
                             ImGuiEx.SetNextItemFullWidth();
-                            ImGui.InputTextWithHint($"##fltr{filterCnt}", "Filter...", ref Filters[filterCnt], 50);
-                            ImGui.Checkbox($"Only selected##{filterCnt}", ref OnlySelected[filterCnt]);
+                            ImGui.InputTextWithHint($"##fltr{filterCnt}", "筛选...", ref Filters[filterCnt], 50);
+                            ImGui.Checkbox($"仅显示已选择项##{filterCnt}", ref OnlySelected[filterCnt]);
                             ImGui.SetWindowFontScale(1f);
                             ImGui.Separator();
                         }
@@ -131,7 +131,7 @@ namespace DynamicBridge.Gui
                         //Sorting
                         var rowPos = ImGui.GetCursorPos();
                         ImGui.Checkbox("##enable", ref rule.Enabled);
-                        ImGuiEx.Tooltip("Enable this rule");
+                        ImGuiEx.Tooltip("启用此规则");
 
                         ImGui.SameLine();
                         ImGui.PushFont(UiBuilder.IconFont);
@@ -168,7 +168,7 @@ namespace DynamicBridge.Gui
                         ImGui.PushFont(UiBuilder.IconFont);
                         ImGuiEx.ButtonCheckbox("\uf103", ref rule.Passthrough);
                         ImGui.PopFont();
-                        ImGuiEx.Tooltip("Enable passthrough for this rule. DynamicBridge will continue searching after encountering this rule. All valid found rules will be applied one after another sequentially.");
+                        ImGuiEx.Tooltip("选中后忽略此规则。DynamicBridge在遍历规则时会跳过此规则继续搜索，所有规则将依次应用。");
 
 
                         if(C.Cond_State)
@@ -308,7 +308,7 @@ namespace DynamicBridge.Gui
                             {
                                 if(C.AllowNegativeConditions)
                                 {
-                                    if(ImGui.Selectable("Open allow list editor"))
+                                    if(ImGui.Selectable("打开白名单编辑器"))
                                     {
                                         new TerritorySelector(rule.Territories, (terr, s) =>
                                         {
@@ -317,10 +317,10 @@ namespace DynamicBridge.Gui
                                         })
                                         {
                                             ActionDrawPlaceName = DrawPlaceName,
-                                            WindowName = $"Select allow list zones"
+                                            WindowName = $"选择允许生效的区域"
                                         };
                                     }
-                                    if(ImGui.Selectable("Open deny list editor"))
+                                    if(ImGui.Selectable("打开黑名单编辑器"))
                                     {
                                         new TerritorySelector(rule.Territories, (terr, s) =>
                                         {
@@ -329,7 +329,7 @@ namespace DynamicBridge.Gui
                                         })
                                         {
                                             ActionDrawPlaceName = DrawPlaceName,
-                                            WindowName = $"Select deny list zones"
+                                            WindowName = $"选择不允许生效的区域"
                                         };
                                     }
                                 }
@@ -621,7 +621,7 @@ namespace DynamicBridge.Gui
                         {
                             new TickScheduler(() => Profile.Rules.RemoveAll(x => x.GUID == rule.GUID));
                         }
-                        ImGuiEx.Tooltip("Hold CTRL+Click to delete");
+                        ImGuiEx.Tooltip("按住CTRL+点击来删除");
 
                         if(col) ImGui.PopStyleColor();
                         if(col2) ImGui.PopStyleColor();
@@ -757,7 +757,7 @@ private static IEnumerable<(uint Id, string Name, string DataCenter)> GetChinese
             }
             if(s == -1)
             {
-                ImGuiEx.Tooltip($"If matching any condition with cross, rule will not be applied.");
+                ImGuiEx.Tooltip($"如果匹配到任何被打×的条件，规则不会被应用。");
             }
         }
     }

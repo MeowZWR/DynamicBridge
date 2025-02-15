@@ -12,13 +12,13 @@ public static class GuiCharacters
     public static void Draw()
     {
         ImGuiEx.SetNextItemFullWidth();
-        ImGui.InputTextWithHint($"##Filter1", "Search character name...", ref Filters[1], 100, Utils.CensorFlags);
+        ImGui.InputTextWithHint($"##Filter1", "按角色名称搜索...", ref Filters[1], 100, Utils.CensorFlags);
 
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
         if(ImGui.BeginTable($"##characters", 3, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedSame))
         {
-            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Assigned profile", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("角色名称", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("分配的配置文件", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableHeadersRow();
 
@@ -62,7 +62,7 @@ public static class GuiCharacters
                     C.Blacklist.Add(x.Key);
                     C.ProfilesL.Each(z => z.Characters.Remove(x.Key));
                 }
-                ImGuiEx.Tooltip($"Blacklist {Censor.Character(x.Value)}. This will prevent it from showing up for profile assignments. This will also undo profile assignments for {Censor.Character(x.Value)}. ");
+                ImGuiEx.Tooltip($"将{Censor.Character(x.Value)}加入和名单。这将阻止它出现在配置文件分配中。这也将撤消{Censor.Character(x.Value)}的配置文件分配。");
                 ImGui.SameLine();
 
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Trash, enabled: ImGuiEx.Ctrl))
@@ -70,7 +70,7 @@ public static class GuiCharacters
                     new TickScheduler(() => C.SeenCharacters.Remove(x));
                     C.ProfilesL.Each(z => z.Characters.Remove(x.Key));
                 }
-                ImGuiEx.Tooltip($"Hold CTRL and click to delete information about {x.Value}. This will also undo profile assignment to the character but and as soon as you relog back onto it, {x.Value} will be registered in a plugin again.");
+                ImGuiEx.Tooltip($"按住CTRL键并单击可删除有关{x.Value}的信息。这也将撤消对该角色的配置文件分配，但一旦您重新登记该角色，{x.Value}将再次在插件中注册。");
 
                 ImGui.PopID();
             }
@@ -91,7 +91,7 @@ public static class GuiCharacters
                     var item = x;
                     new TickScheduler(() => C.Blacklist.Remove(item));
                 }
-                ImGuiEx.Tooltip("Unblacklist this character");
+                ImGuiEx.Tooltip("将该角色从黑名单中移出");
                 ImGui.PopID();
             }
 

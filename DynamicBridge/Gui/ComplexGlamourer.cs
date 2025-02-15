@@ -16,11 +16,11 @@ public static unsafe class ComplexGlamourer
     {
         if(!C.EnableGlamourer)
         {
-            ImGuiEx.Text(EColor.RedBright, "Glamourer disabled in settings. Function unavailable.");
+            ImGuiEx.Text(EColor.RedBright, "Glamourer在插件设置中被禁用。功能不可用。");
             return;
         }
-        ImGuiEx.TextWrapped($"Here you can create layered designs for Glamourer. Upon application, they will be applied sequentially one after another. You will be able to select layered designs for profiles together with normal entries.");
-        if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Plus, "Add new entry"))
+        ImGuiEx.TextWrapped($"在此处，您可以创建一个基于Glamourer模板的叠加组合设计。一旦生效，它们将按顺序被依次应用（比如在Glamourer里第一个模板规则是仅应用外貌，第二个模板仅应用装备，他们将组合起来），越靠下优先级越高。在规则里，可以同时选择层组设计和Glamourer模板。");
+        if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Plus, "添加新条目"))
         {
             C.ComplexGlamourerEntries.Add(new());
         }
@@ -29,13 +29,13 @@ public static unsafe class ComplexGlamourer
             ImGui.PushID(gEntry.GUID);
             if(ImGui.CollapsingHeader($"{gEntry.Name}###entry"))
             {
-                ImGuiEx.TextV($"1. Name Layered Design:");
+                ImGuiEx.TextV($"1. 命名层组设计：");
                 ImGui.SameLine();
                 ImGuiEx.SetNextItemFullWidth();
                 ImGui.InputText($"##name", ref gEntry.Name, 100);
-                ImGuiEx.TextV($"2. Select Glamourer designs:");
+                ImGuiEx.TextV($"2. 选择 Glamourer 设计:");
                 ImGui.SameLine();
-                if(ImGui.BeginCombo("##glamour", gEntry.Designs.Select(P.GlamourerManager.TransformName).PrintRange(out var fullList, "- None -"), C.ComboSize))
+                if(ImGui.BeginCombo("##glamour", gEntry.Designs.Select(P.GlamourerManager.TransformName).PrintRange(out var fullList, "- 未选择 -"), C.ComboSize))
                 {
                     if(ImGui.IsWindowAppearing()) Utils.ResetCaches();
                     FiltersSelection();
@@ -58,7 +58,7 @@ public static unsafe class ComplexGlamourer
                     }
                     ImGui.EndCombo();
                 }
-                ImGuiEx.Text($"3. Change order if needed");
+                ImGuiEx.Text($"3. 更改顺序（如果需要）");
                 for(var i = 0; i < gEntry.Designs.Count; i++)
                 {
                     var design = gEntry.Designs[i];
@@ -76,7 +76,7 @@ public static unsafe class ComplexGlamourer
                     ImGuiEx.Text($"{P.GlamourerManager.TransformName(design)}");
                     ImGui.PopID();
                 }
-                if(ImGuiEx.ButtonCtrl("Delete"))
+                if (ImGuiEx.ButtonCtrl("删除"))
                 {
                     new TickScheduler(() => C.ComplexGlamourerEntries.RemoveAll(x => x.GUID == gEntry.GUID));
                 }
@@ -88,8 +88,8 @@ public static unsafe class ComplexGlamourer
         {
             ImGui.SetWindowFontScale(0.8f);
             ImGuiEx.SetNextItemFullWidth();
-            ImGui.InputTextWithHint($"##fltr", "Filter...", ref Filter, 50);
-            ImGui.Checkbox($"Only selected", ref OnlySelected);
+            ImGui.InputTextWithHint($"##fltr", "筛选...", ref Filter, 50);
+            ImGui.Checkbox($"仅显示已选择项", ref OnlySelected);
             ImGui.SetWindowFontScale(1f);
             ImGui.Separator();
         }

@@ -48,7 +48,7 @@ namespace DynamicBridge.Gui
                         Profile.Presets.Add(new());
                     }
                 }
-                ImGuiEx.Tooltip("Add new empty preset into default or focused folder");
+                ImGuiEx.Tooltip("添加空预设到默认组或焦点组");
                 ImGui.SameLine();
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Paste))
                 {
@@ -68,7 +68,7 @@ namespace DynamicBridge.Gui
                         }
                         else
                         {
-                            Notify.Error("Could not import from clipboard");
+                            Notify.Error("无法从剪贴板导入");
                         }
                     }
                     catch(Exception e)
@@ -76,14 +76,14 @@ namespace DynamicBridge.Gui
                         Notify.Error(e.Message);
                     }
                 }
-                ImGuiEx.Tooltip($"Paste previously copied preset from clipboard");
+                ImGuiEx.Tooltip($"从剪贴板粘贴以前复制的预设");
                 ImGui.SameLine();
 
                 if(ImGuiEx.IconButton(FontAwesomeIcon.FolderPlus))
                 {
-                    Profile.PresetsFolders.Add(new() { Name = $"Preset folder {Profile.PresetsFolders.Count + 1}" });
+                    Profile.PresetsFolders.Add(new() { Name = $"预设组 {Profile.PresetsFolders.Count + 1}" });
                 }
-                ImGuiEx.Tooltip("Add new preset folder");
+                ImGuiEx.Tooltip("添加预设组");
 
                 ImGui.SameLine();
 
@@ -109,14 +109,14 @@ namespace DynamicBridge.Gui
                 ImGuiEx.RightFloat(RightButtons);
                 Buttons();
                 ImGui.SameLine();
-                ImGuiEx.TextWrapped($"Global Presets are available for use on each of your characters.");
+                ImGuiEx.TextWrapped($"全局预设可用于您的每个角色。");
             }
 
             string newOpen = null;
 
             if(!Focus || Open == "" || Open == null)
             {
-                if(ImGuiEx.TreeNode($"Main presets##global", ImGuiTreeNodeFlags.DefaultOpen))
+                if(ImGuiEx.TreeNode($"主预设组##global", ImGuiTreeNodeFlags.DefaultOpen))
                 {
                     newOpen = "";
                     if(DragDrop.AcceptPayload(out var result, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect))
@@ -142,7 +142,7 @@ namespace DynamicBridge.Gui
                 if(Focus && Open != presetFolder.GUID && Open != null) continue;
                 if(presetFolder.HiddenFromSelection)
                 {
-                    ImGuiEx.RightFloat($"RFCHP{presetFolder.GUID}", () => ImGuiEx.Text(ImGuiColors.DalamudGrey, "Hidden from rules"));
+                    ImGuiEx.RightFloat($"RFCHP{presetFolder.GUID}", () => ImGuiEx.Text(ImGuiColors.DalamudGrey, "在动态规则中被隐藏"));
                 }
                 if(ImGuiEx.TreeNode($"{presetFolder.Name}###presetfolder{presetFolder.GUID}"))
                 {
@@ -170,32 +170,32 @@ namespace DynamicBridge.Gui
                     if(ImGui.BeginPopup($"Folder{presetFolder.GUID}"))
                     {
                         ImGuiEx.SetNextItemWidthScaled(150f);
-                        ImGui.InputTextWithHint("##name", "Folder name", ref presetFolder.Name, 200);
-                        if(ImGui.Selectable("Export to clipboard"))
+                        ImGui.InputTextWithHint("##name", "组名称", ref presetFolder.Name, 200);
+                        if(ImGui.Selectable("导出到剪贴板"))
                         {
                             Copy(EzConfig.DefaultSerializationFactory.Serialize(presetFolder, false));
                         }
                         if(presetFolder.HiddenFromSelection)
                         {
-                            if(ImGui.Selectable("Show in Rules section")) presetFolder.HiddenFromSelection = false;
+                            if(ImGui.Selectable("在动态规则的预设下拉菜单中显示")) presetFolder.HiddenFromSelection = false;
                         }
                         else
                         {
-                            if(ImGui.Selectable("Hide from Rules section")) presetFolder.HiddenFromSelection = true;
+                            if(ImGui.Selectable("在动态规则的预设下拉菜单中隐藏")) presetFolder.HiddenFromSelection = true;
                         }
-                        if(ImGui.Selectable("Move up", false, ImGuiSelectableFlags.DontClosePopups) && presetFolderIndex > 0)
+                        if(ImGui.Selectable("上移", false, ImGuiSelectableFlags.DontClosePopups) && presetFolderIndex > 0)
                         {
                             (Profile.PresetsFolders[presetFolderIndex], Profile.PresetsFolders[presetFolderIndex - 1]) = (Profile.PresetsFolders[presetFolderIndex - 1], Profile.PresetsFolders[presetFolderIndex]);
                         }
-                        if(ImGui.Selectable("Move down", false, ImGuiSelectableFlags.DontClosePopups) && presetFolderIndex < Profile.PresetsFolders.Count - 1)
+                        if(ImGui.Selectable("下移", false, ImGuiSelectableFlags.DontClosePopups) && presetFolderIndex < Profile.PresetsFolders.Count - 1)
                         {
                             (Profile.PresetsFolders[presetFolderIndex], Profile.PresetsFolders[presetFolderIndex + 1]) = (Profile.PresetsFolders[presetFolderIndex + 1], Profile.PresetsFolders[presetFolderIndex]);
                         }
                         ImGui.Separator();
 
-                        if(ImGui.BeginMenu("Delete folder..."))
+                        if(ImGui.BeginMenu("删除组..."))
                         {
-                            if(ImGui.Selectable("...and move profiles to default folder (Hold CTRL)"))
+                            if(ImGui.Selectable("...并将包含的预设移动到默认组（按住CTRL）"))
                             {
                                 if(ImGuiEx.Ctrl)
                                 {
@@ -209,7 +209,7 @@ namespace DynamicBridge.Gui
                                     });
                                 }
                             }
-                            if(ImGui.Selectable("...and delete included profiles (Hold CTRL+SHIFT)"))
+                            if(ImGui.Selectable("...并删除包含的预设（按住CTRL+SHIFT）"))
                             {
                                 if(ImGuiEx.Ctrl && ImGuiEx.Shift)
                                 {
@@ -225,14 +225,14 @@ namespace DynamicBridge.Gui
                     {
                         if(!ImGui.IsMouseDragging(ImGuiMouseButton.Left))
                         {
-                            ImGuiEx.Tooltip("Right-click to open context menu");
+                            ImGuiEx.Tooltip("鼠标右键点击打开上下文菜单");
                         }
                     }
                 }
             }
             if(drawFallback)
             {
-                if(ImGuiEx.TreeNode($"Fallback preset"))
+                if(ImGuiEx.TreeNode($"备用预设"))
                 {
                     DrawPresets(Profile, [Profile.FallbackPreset], out _, $"FallbackPreset-8c680b09-acd0-43ab-9413-26a4e38841fc", true, drawGlobalSection);
                     Open = newOpen;
@@ -274,8 +274,8 @@ namespace DynamicBridge.Gui
                     {
                         ImGui.SetWindowFontScale(0.8f);
                         ImGuiEx.SetNextItemFullWidth();
-                        ImGui.InputTextWithHint($"##fltr{filterCnt}", "Filter...", ref Filters[filterCnt], 50);
-                        ImGui.Checkbox($"Only selected##{filterCnt}", ref OnlySelected[filterCnt]);
+                        ImGui.InputTextWithHint($"##fltr{filterCnt}", "筛选...", ref Filters[filterCnt], 50);
+                        ImGui.Checkbox($"仅显示已选择项##{filterCnt}", ref OnlySelected[filterCnt]);
                         ImGui.SetWindowFontScale(1f);
                         ImGui.Separator();
                     }
@@ -295,7 +295,7 @@ namespace DynamicBridge.Gui
                     if(isFallback)
                     {
                         ImGuiEx.TextV(" ");
-                        ImGuiEx.HelpMarker($"Values from this preset will be used as default in current profile.");
+                        ImGuiEx.HelpMarker($"此预设值将用作当前配置文件中的默认值。");
                     }
                     else
                     {
@@ -309,7 +309,7 @@ namespace DynamicBridge.Gui
                             }
                             P.ForceUpdate = true;
                         }
-                        ImGuiEx.Tooltip("Set this preset as static, applying it unconditionally on this character disregarding any rules.");
+                        ImGuiEx.Tooltip("将此预设设置为静态：此预设会无视任何规则，无条件地应用于此角色。");
                         ImGui.SameLine();
                         var moveIndex = i;
                         DragDrop.DrawButtonDummy(preset.GUID, (payload) =>
@@ -324,7 +324,7 @@ namespace DynamicBridge.Gui
                         }
                         if(ImGui.BeginPopup($"MoveTo##{preset.GUID}"))
                         {
-                            if(ImGui.Selectable("- Main folder -", currentProfile.Presets.Any(x => x.GUID == preset.GUID)))
+                            if(ImGui.Selectable("- 默认组 -", currentProfile.Presets.Any(x => x.GUID == preset.GUID)))
                             {
                                 DragDropUtils.MovePresetToList(currentProfile, preset.GUID, currentProfile.Presets);
                             }
@@ -344,7 +344,7 @@ namespace DynamicBridge.Gui
                     //name
                     if(isFallback)
                     {
-                        ImGuiEx.TextV("Base Preset");
+                        ImGuiEx.TextV("基础预设");
                     }
                     else
                     {
@@ -355,7 +355,7 @@ namespace DynamicBridge.Gui
                             ImGui.PushFont(UiBuilder.IconFont);
                             ImGuiEx.Text(ImGuiColors.DalamudRed, Utils.IconWarning);
                             ImGui.PopFont();
-                            ImGuiEx.Tooltip("Name can not be empty");
+                            ImGuiEx.Tooltip("名称不能为空值");
                             ImGui.SameLine();
                         }
                         else if(isNonUnique)
@@ -363,11 +363,11 @@ namespace DynamicBridge.Gui
                             ImGui.PushFont(UiBuilder.IconFont);
                             ImGuiEx.Text(ImGuiColors.DalamudRed, Utils.IconWarning);
                             ImGui.PopFont();
-                            ImGuiEx.Tooltip("Name must be unique");
+                            ImGuiEx.Tooltip("名称必须是唯一值");
                             ImGui.SameLine();
                         }
                         ImGuiEx.SetNextItemFullWidth();
-                        ImGui.InputTextWithHint("##name", "Preset name", ref preset.Name, 100, Utils.CensorFlags);
+                        ImGui.InputTextWithHint("##name", "预设名称", ref preset.Name, 100, Utils.CensorFlags);
                     }
 
 
@@ -448,7 +448,7 @@ namespace DynamicBridge.Gui
                                     }
                                     if(items.Count > 0)
                                     {
-                                        if(ImGuiEx.TreeNode(Colors.TabYellow, "Layered Designs"))
+                                        if(ImGuiEx.TreeNode(Colors.TabYellow, "层组设计"))
                                         {
                                             Utils.DrawFolder(items);
                                             ImGui.TreePop();
@@ -473,11 +473,11 @@ namespace DynamicBridge.Gui
                             ImGui.TableNextColumn();
                             if(isGlobal)
                             {
-                                ImGuiEx.HelpMarker("All registered profiles are displayed in global profile, but only ones that are assigned to your current character will be used.", EColor.OrangeBright, FontAwesomeIcon.ExclamationTriangle.ToIconString(), false);
+                                ImGuiEx.HelpMarker("所有在C+中添加的[角色配置]都会显示在全局预设中，但只会使用指定给当前角色的配置。", EColor.OrangeBright, FontAwesomeIcon.ExclamationTriangle.ToIconString(), false);
                                 ImGui.SameLine();
                             }
                             ImGuiEx.SetNextItemFullWidth();
-                            if(ImGui.BeginCombo("##customize", preset.Customize.Select(P.CustomizePlusManager.TransformName).PrintRange(out var fullList, "- None -"), C.ComboSize))
+                            if(ImGui.BeginCombo("##customize", preset.Customize.Select(P.CustomizePlusManager.TransformName).PrintRange(out var fullList, "- 未选择 -"), C.ComboSize))
                             {
                                 ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, Utils.IndentSpacing);
                                 if(ImGui.IsWindowAppearing()) Utils.ResetCaches();
@@ -530,11 +530,11 @@ namespace DynamicBridge.Gui
                             ImGui.TableNextColumn();
                             if(isGlobal && !C.HonotificUnfiltered)
                             {
-                                ImGuiEx.HelpMarker("All registered titles are displayed in global profile, but only ones that are assigned to your current character will be used UNLESS \"Allow selecting titles registered for other characters\" is enabled in settings.", EColor.OrangeBright, FontAwesomeIcon.ExclamationTriangle.ToIconString(), false);
+                                ImGuiEx.HelpMarker("所有在Honorific中添加的称号都会显示在全局预设中，但只会使用指定给当前角色的配置。\n除非在设置中启用了“允许选择为其他角色添加的称号”。", EColor.OrangeBright, FontAwesomeIcon.ExclamationTriangle.ToIconString(), false);
                                 ImGui.SameLine();
                             }
                             ImGuiEx.SetNextItemFullWidth();
-                            if(ImGui.BeginCombo("##honorific", preset.Honorific.PrintRange(out var fullList, "- None -"), C.ComboSize))
+                            if(ImGui.BeginCombo("##honorific", preset.Honorific.PrintRange(out var fullList, "- 未选择 -"), C.ComboSize))
                             {
                                 ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, Utils.IndentSpacing);
                                 if(ImGui.IsWindowAppearing()) Utils.ResetCaches();
@@ -591,11 +591,11 @@ namespace DynamicBridge.Gui
                             ImGui.TableNextColumn();
                             ImGuiEx.SetNextItemFullWidth();
                             string fullList = null;
-                            if(ImGui.BeginCombo("##penumbra", preset.PenumbraType != SpecialPenumbraAssignment.Use_Named_Collection ? preset.PenumbraType.ToString().Replace("_", " ") : preset.Penumbra.PrintRange(out fullList, "- 未选择 -"), C.ComboSize))
+                            if(ImGui.BeginCombo("##penumbra", preset.PenumbraType != SpecialPenumbraAssignment.使用独立分配 ? preset.PenumbraType.ToString().Replace("_", " ") : preset.Penumbra.PrintRange(out fullList, "- 未选择 -"), C.ComboSize))
                             {
                                 ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, Utils.IndentSpacing);
                                 if(ImGui.IsWindowAppearing()) Utils.ResetCaches();
-                                ImGuiEx.Text($"Assignment Type:");
+                                ImGuiEx.Text($"分配类型：");
                                 ImGuiEx.EnumCombo($"##asstype", ref preset.PenumbraType);
                                 if(preset.PenumbraType == SpecialPenumbraAssignment.使用独立分配)
                                 {
@@ -684,7 +684,7 @@ namespace DynamicBridge.Gui
                                             ImGui.PushFont(UiBuilder.IconFont);
                                             ImGuiEx.ButtonCheckbox(FontAwesomeIcon.Link.ToIconString(), ref e.Cancel, true);
                                             ImGui.PopFont();
-                                            ImGuiEx.Tooltip($"Cancel this moodle(s) once preset is no longer applied");
+                                            ImGuiEx.Tooltip($"在此预设被取消应用的同时取消此状态。");
                                         }
                                         ImGui.EndTable();
                                     }
@@ -713,7 +713,7 @@ namespace DynamicBridge.Gui
                                     Utils.DrawFolder(items);
                                     ImGui.TreePop();
                                 }
-                                if(ImGuiEx.TreeNode(Colors.TabYellow, "Moodle Presets", ImGuiTreeNodeFlags.DefaultOpen))
+                                if(ImGuiEx.TreeNode(Colors.TabYellow, "状态预设", ImGuiTreeNodeFlags.DefaultOpen))
                                 {
                                     List<(string[], Action)> items = [];
                                     foreach(var x in moodlePresets)
@@ -740,7 +740,7 @@ namespace DynamicBridge.Gui
                                 ImGui.PopStyleVar();
                                 ImGui.EndCombo();
                             }
-                            if(fullList != null) ImGuiEx.Tooltip("All of these Moodles/Presets will be applied:\n" + fullList);
+                            if(fullList != null) ImGuiEx.Tooltip("所有选择的Moodles/预设都将被应用：\n" + fullList);
                             filterCnt++;
                         }
                     }
@@ -752,7 +752,7 @@ namespace DynamicBridge.Gui
                     {
                         Safe(() => Copy(JsonConvert.SerializeObject(preset)));
                     }
-                    ImGuiEx.Tooltip("Copy to clipboard");
+                    ImGuiEx.Tooltip("复制到剪贴板");
                     if(!isFallback)
                     {
                         ImGui.SameLine();
@@ -760,7 +760,7 @@ namespace DynamicBridge.Gui
                         {
                             new TickScheduler(() => presetList.RemoveAll(x => x.GUID == preset.GUID));
                         }
-                        ImGuiEx.Tooltip("Hold CTRL+Click to delete");
+                        ImGuiEx.Tooltip("按住CTRL+点击来删除");
                     }
 
                     if(isStaticExists) ImGui.PopStyleColor();

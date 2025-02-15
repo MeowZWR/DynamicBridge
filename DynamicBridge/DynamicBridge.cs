@@ -80,11 +80,11 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
             }
             EzConfigGui.Init(UI.DrawMain);
-            EzCmd.Add("/db", OnCommand, "open the plugin settings\n" +
-                "/db apply → reapply rules immediately\n" +
-                "/db static <name> → mark preset as static\n" +
-                "/db dynamic → cancel static preset and use dynamic rules\n" +
-                "/db characterprofile <name> → changes profile of currently active character to provided profile");
+            EzCmd.Add("/db", OnCommand, "打开插件设置窗口\n" +
+                "/db apply → 立即重新应用规则\n" +
+                "/db static <name> → 将预设标记为静态\n" +
+                "/db dynamic → 取消静态预设，使用动态规则\n" +
+                "/db characterprofile <name> → 将当前活动角色的档案更改为以该名称命名的档案");
             AgentMapInst = AgentMap.Instance();
             WeatherManager = new();
             new EzFrameworkUpdate(OnUpdate);
@@ -120,7 +120,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
                 else
                 {
-                    ChatPrinter.Orange("[DynamicBridge] Glamourer automation is enabled but DynamicBridge is not configured to work together with it. This will cause issues. Either disable Glamourer automation or configure DynamicBridge accordingly (/db - settings).");
+                	ChatPrinter.Orange("[DynamicBridge] Glamourer自动执行已启用，但是DynamicBridge还未配置为与其协同运行。 这将导致问题。请禁用Glamourer自动执行或在DynamicBridge插件设置选项卡中进行设置（使用命令/db或/db - settings打开设置窗口）。");
                 }
             }
         }

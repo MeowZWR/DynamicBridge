@@ -17,30 +17,30 @@ public static class GuiProfiles
 
     public static void Draw()
     {
-        ImGuiEx.InputWithRightButtonsArea("DrawProfilesInp", () => ImGui.InputTextWithHint($"##Filter0", "Search profile name...", ref Filters[0], 100), () =>
+        ImGuiEx.InputWithRightButtonsArea("DrawProfilesInp", () => ImGui.InputTextWithHint($"##Filter0", "按名称搜索配置文件...", ref Filters[0], 100), () =>
         {
-            if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.PlusCircle, "Create Empty"))
+            if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.PlusCircle, "创建空白配置"))
             {
                 var profile = new Profile();
                 C.ProfilesL.Add(profile);
-                profile.Name = $"New Profile {C.ProfilesL.Count}";
+                profile.Name = $"新建配置{C.ProfilesL.Count}";
             }
             ImGui.SameLine();
-            ImGuiEx.Tooltip($"Create new empty profile");
-            if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Paste, "Paste from Clipboard"))
+            ImGuiEx.Tooltip($"创建新的空白的配置文件");
+            if(ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Paste, "从剪贴板粘贴"))
             {
                 try
                 {
                     var x = EzConfig.DefaultSerializationFactory.Deserialize<Profile>(Paste());
                     if(x != null)
                     {
-                        var newName = x.Name + $" (copy)";
+                        var newName = x.Name + $"（副本）";
                         if(C.ProfilesL.Any(z => z.Name == newName))
                         {
                             var i = 2;
                             do
                             {
-                                newName = x.Name + $" (copy {i++})";
+                                newName = x.Name + $"（副本{i++}）";
                             }
                             while(C.ProfilesL.Any(z => z.Name == newName));
                         }
@@ -50,7 +50,7 @@ public static class GuiProfiles
                     }
                     else
                     {
-                        Notify.Error($"Could not import from clipboard");
+                        Notify.Error($"无法从剪贴板导入");
                     }
                 }
                 catch(Exception e)
@@ -58,16 +58,16 @@ public static class GuiProfiles
                     Notify.Error(e.Message);
                 }
             }
-            ImGuiEx.Tooltip($"Create new profile from data in clipboard");
+            ImGuiEx.Tooltip($"使用剪贴板中的数据创建新配置文件");
             ImGui.SameLine();
         });
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
         if(ImGui.BeginTable($"##profiles", 4, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit))
         {
             //ImGui.TableSetupColumn("  ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoSort);
-            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Used by", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Folder whitelist", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("配置名称", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("使用角色", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("折叠组白名单", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableHeadersRow();
 
@@ -157,19 +157,19 @@ public static class GuiProfiles
                     UI.SelectedProfile = profile;
                     new TickScheduler(() => UI.RequestTab = "动态规则");
                 }
-                ImGuiEx.Tooltip("Select this profile for editing");
+                ImGuiEx.Tooltip("选择此配置文件进行编辑");
                 ImGui.SameLine();
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Copy.ToIconString()))
                 {
                     Copy(JsonConvert.SerializeObject(profile));
                 }
-                ImGuiEx.Tooltip("Copy this profile to clipboard");
+                ImGuiEx.Tooltip("将此配置文件复制到剪贴板");
                 ImGui.SameLine();
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Trash.ToIconString(), enabled: ImGuiEx.Ctrl))
                 {
                     new TickScheduler(() => C.ProfilesL.Remove(profile));
                 }
-                ImGuiEx.Tooltip("Hold CTRL and click to delete");
+                ImGuiEx.Tooltip("按住CTRL并点击来删除");
 
                 ImGui.PopID();
             }
