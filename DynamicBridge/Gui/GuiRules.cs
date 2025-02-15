@@ -475,7 +475,8 @@ namespace DynamicBridge.Gui
                                         Job.VPR => "蝰蛇剑士",
                                         Job.PCT => "绘灵法师",
                                         _ => cond.ToString().Replace("_", " ")
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                                    };
+                                    if (Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
                                     if(OnlySelected[filterCnt] && !rule.Jobs.Contains(cond)) continue;
                                     if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)cond.GetIcon(), false, out var texture))
                                     {
