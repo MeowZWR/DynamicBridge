@@ -18,5 +18,6 @@ namespace DynamicBridge.Core
         观看过场动画,
         战斗中,
         无法战斗,
+        制作中,
     }
 }

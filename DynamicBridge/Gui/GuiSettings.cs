@@ -34,12 +34,13 @@ public static class GuiSettings
             ImGuiEx.CheckboxInverted("隐藏教程", ref C.ShowTutorial);
             ImGui.Checkbox($"允许使用否定条件", ref C.AllowNegativeConditions);
             ImGuiEx.HelpMarker("如果启用此选项，你可以使用×标记任何条件。如果一条动态规则中匹配到任何×标的条件，则忽略整条规则。");
-            ImGui.Checkbox("在预设编辑器中显示Glamourer角色设计的完整路径（如果有）。", ref C.GlamourerFullPath);
-            ImGuiEx.SetNextItemWidthScaled(50f);
+            ImGui.Checkbox("在预设编辑器中显示Glamourer角色设计的完整路径（如果有）", ref C.GlamourerFullPath);
+            ImGuiEx.SetNextItemWidthScaled(150f);
+            ImGui.Checkbox("Glamourer 下拉菜单选项有更改时重新应用规则和预设", ref C.AutoApplyOnChange);
             ImGuiEx.EnumCombo("下拉菜单尺寸", ref C.ComboSize, ComboFlagNames.ContainsKey, ComboFlagNames);
             if(ImGui.Checkbox($"在职业或套装改变时强制更新外观。", ref C.UpdateJobGSChange))
             {
-                if(C.UpdateJobGSChange)
+                if (C.UpdateJobGSChange)
                 {
                     P.Memory.EquipGearsetHook.Enable();
                 }

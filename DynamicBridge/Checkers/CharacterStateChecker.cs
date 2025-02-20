@@ -23,7 +23,8 @@ namespace DynamicBridge.Core
             [CharacterState.观看过场动画] = () => Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent]
                 || Svc.Condition[ConditionFlag.WatchingCutscene78],
             [CharacterState.战斗中] = () => Svc.Condition[ConditionFlag.InCombat],
-            [CharacterState.无法战斗] = () => Player.Available && Player.Object.IsDead
+            [CharacterState.无法战斗] = () => Player.Available && Player.Object.IsDead,
+            [CharacterState.制作中] = () => Svc.Condition[ConditionFlag.Crafting]
         };
 
         public static bool Check(this CharacterState state)
