@@ -49,7 +49,8 @@ public static class GuiCharacters
                         if(currentProfile == profile && ImGui.IsWindowAppearing()) ImGui.SetScrollHereY();
                         if(ImGui.Selectable($"{profile.CensoredName}##{profile.GUID}", currentProfile == profile))
                         {
-                            if(currentProfile.IsStaticExists() && profile.IsStaticExists()){
+                            if(profile.IsStaticExists() && (currentProfile == null || currentProfile.IsStaticExists()))
+                            {
                                 P.ForceUpdate = true;
                             }
                             profile.SetCharacter(x.Key);
@@ -65,7 +66,7 @@ public static class GuiCharacters
                     C.Blacklist.Add(x.Key);
                     C.ProfilesL.Each(z => z.Characters.Remove(x.Key));
                 }
-                ImGuiEx.Tooltip($"将{Censor.Character(x.Value)}加入和名单。这将阻止它出现在配置文件分配中。这也将撤消{Censor.Character(x.Value)}的配置文件分配。");
+                ImGuiEx.Tooltip($"将{Censor.Character(x.Value)}加入黑名单。这将阻止它出现在配置文件分配中。这也将撤消{Censor.Character(x.Value)}的配置文件分配。");
                 ImGui.SameLine();
 
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Trash, enabled: ImGuiEx.Ctrl))
