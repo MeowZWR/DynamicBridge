@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface.Components;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Style;
 using DynamicBridge.Configuration;
 using DynamicBridge.Core;
@@ -23,7 +23,7 @@ namespace DynamicBridge.Gui
     {
         private static Vector2 iconSize => new(24f);
 
-        private static string[] Filters = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+        private static string[] Filters = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
         private static bool[] OnlySelected = new bool[20];
         private static string CurrentDrag = "";
 
@@ -78,6 +78,7 @@ namespace DynamicBridge.Gui
                     C.Cond_World,
                     C.Cond_Zone,
                     C.Cond_ZoneGroup,
+                    C.Cond_Players,
                 ];
 
                 List<(Vector2 RowPos, Vector2 ButtonPos, Action BeginDraw, Action AcceptDraw)> MoveCommands = [];
@@ -97,6 +98,7 @@ namespace DynamicBridge.Gui
                     if(C.Cond_Job) ImGui.TableSetupColumn("职业");
                     if(C.Cond_World) ImGui.TableSetupColumn("服务器");
                     if(C.Cond_Gearset) ImGui.TableSetupColumn("套装");
+                    if(C.Cond_Players) ImGui.TableSetupColumn("玩家");
                     ImGui.TableSetupColumn("预设");
                     ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
                     ImGui.TableHeadersRow();
@@ -580,6 +582,48 @@ namespace DynamicBridge.Gui
                         }
                         filterCnt++;
 
+                        if (C.Cond_Players)
+                        {
+                            ImGui.TableNextColumn();
+                            
+                            // Player Selection Dropdown
+                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                            if (ImGui.BeginCombo("##players", rule.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}").PrintRange(rule.Not.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
+                            {
+                                FiltersSelection();
+
+                                foreach (var player in C.selectedPlayers)
+                                {
+                                    var name = player.Name;
+
+                                    // Apply filtering
+                                    if (Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase))
+                                        continue;
+                                    if (OnlySelected[filterCnt] && !rule.Players.Contains(name))
+                                        continue;
+
+                                    DrawSelector($"{name}##{player.Name}", player.Name, rule.Players, rule.Not.Players);
+                                }
+
+                                // Handle players that no longer exist in `C.selectedPlayers` but are still in `rule.Players`
+                                foreach (var z in rule.Players)
+                                {
+                                    if (!C.selectedPlayers.Any(p => p.Name == z))
+                                    {
+                                        ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                                        ImGuiEx.CollectionCheckbox($"{z}", z, rule.Players, delayedOperation: true);
+                                        ImGui.PopStyleColor();
+                                    }
+                                }
+
+                                ImGui.EndCombo();
+                            }
+
+                            if (fullList != null) 
+                                ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                        }
+                        filterCnt++;
+
                         ImGui.TableNextColumn();
 
                         {
@@ -595,13 +639,19 @@ namespace DynamicBridge.Gui
                                     if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
                                     if(OnlySelected[filterCnt] && !rule.SelectedPresets.Contains(name)) continue;
                                     if(x.GetFolder(Profile)?.HiddenFromSelection == true) continue;
-                                    ImGuiEx.CollectionCheckbox($"{x.CensoredName}##{x.GUID}", x.Name, rule.SelectedPresets);
+                                    if (ImGuiEx.CollectionCheckbox($"{x.CensoredName}##{x.GUID}", x.Name, rule.SelectedPresets))
+                                    {
+                                        rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
+                                    }
                                 }
                                 foreach(var x in rule.SelectedPresets)
                                 {
                                     if(designs.Any(d => d.Name == x && d.GetFolder(Profile)?.HiddenFromSelection != true)) continue;
                                     ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                                    ImGuiEx.CollectionCheckbox($"{x}", x, rule.SelectedPresets, false, true);
+                                    if (ImGuiEx.CollectionCheckbox($"{x}", x, rule.SelectedPresets, false, true))
+                                    {
+                                        rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
+                                    }
                                     ImGui.PopStyleColor();
                                 }
                                 ImGui.EndCombo();
@@ -615,6 +665,22 @@ namespace DynamicBridge.Gui
                         if(ImGuiEx.IconButton(FontAwesomeIcon.Copy))
                         {
                             Safe(() => Clipboard.SetText(JsonConvert.SerializeObject(rule)));
+                        }
+                        if (C.StickyPresets && C.Sticky){
+                            ImGui.SameLine();
+                            if(ImGuiEx.IconButton(FontAwesomeIcon.Dice))
+                            {
+                                if (rule.SelectedPresets.Count > 1) {
+                                    var old = rule.StickyRandom;
+                                    rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
+                                    P.ForceUpdate = true;
+                                    if (rule.StickyRandom == old) {
+                                        rule.StickyRandom = (rule.StickyRandom + 1)%rule.SelectedPresets.Count;
+                                    };
+                                }
+                                else {rule.StickyRandom = 0;}
+                            }
+                            ImGuiEx.Tooltip($"Randomize Preset Used.");
                         }
                         ImGui.SameLine();
                         if(ImGuiEx.IconButton(FontAwesomeIcon.Trash) && ImGui.GetIO().KeyCtrl)

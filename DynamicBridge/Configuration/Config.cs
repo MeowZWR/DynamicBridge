@@ -1,4 +1,4 @@
-﻿using ECommons.Configuration;
+using ECommons.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +33,16 @@ namespace DynamicBridge.Configuration
         public string LastVersion = "0";
         public ImGuiComboFlags ComboSize = ImGuiComboFlags.HeightLarge;
         public bool UpdateJobGSChange = true;
+        public bool Sticky = false;
+        public bool StickyPresets = false;
+        public bool StickyGlamourer = false;
+        public bool StickyCustomize = false;
+        public bool StickyHonorific = false;
+        public bool StickyPenumbra = false;
+        public RandomTypes RandomChoosenType = RandomTypes.OnLogin;
+        public double UserInputRandomizerTime = 5;
+        public bool ForceUpdateOnRandomize = false;
+        public bool DontChangeOnTerritoryChange = false;
         public bool UpdateGearChange = false;
         public Dictionary<ulong, string> SeenCharacters = [];
 
@@ -47,6 +57,7 @@ namespace DynamicBridge.Configuration
         public bool Cond_Job = true;
         public bool Cond_World = false;
         public bool Cond_Gearset = false;
+        public bool Cond_Players = false;
 
         public Dictionary<ulong, List<GearsetEntry>> GearsetNameCacheCID = [];
 
@@ -57,6 +68,7 @@ namespace DynamicBridge.Configuration
         public bool UnifyJobs = true;
         public bool HonotificUnfiltered = false;
         public bool AutofillFromGlam = false;
+        public List<(string Name, float Distance)> selectedPlayers = new List<(string Name, float Distance)>();
     }
 
     public enum GlamourerNoRuleBehavior
@@ -64,5 +76,11 @@ namespace DynamicBridge.Configuration
         RevertToNormal,
         RevertToAutomation,
         StoreRestore
+    }
+    public enum RandomTypes
+    {
+        OnLogin,
+        Never,
+        Timer
     }
 }

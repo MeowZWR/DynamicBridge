@@ -51,6 +51,7 @@ public static unsafe class UI
             ("住宅登记", HouseReg.Draw, Colors.TabPurple, true),
             ("配置文件", GuiProfiles.Draw, Colors.TabBlue, true),
             ("角色管理", GuiCharacters.Draw, Colors.TabBlue, true),
+            ("其他玩家", GuiPlayers.Draw, Colors.TabBlue, true),
             ("插件设置", GuiSettings.Draw, null, true),
             InternalLog.ImGuiTab(),
             (C.Debug?"调试":null, Debug.Draw, ImGuiColors.DalamudGrey3, true),

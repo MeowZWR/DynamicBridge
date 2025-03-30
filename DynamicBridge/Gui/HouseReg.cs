@@ -13,7 +13,7 @@ namespace DynamicBridge.Gui
         public static void Draw()
         {
             ImGuiEx.TextWrapped($"在此处，您可以登记住宅。登记后可以在“动态规则”选项卡中选择它作为条件。");
-            var CurrentHouse = HousingManager.Instance()->GetCurrentHouseId();
+            var CurrentHouse = HousingManager.Instance()->GetCurrentIndoorHouseId();
             if(CurrentHouse > 0)
             {
                 ImGuiEx.Text($"当前住宅：{Censor.Hide($"{CurrentHouse:X16}")}");
