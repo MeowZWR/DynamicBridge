@@ -26,7 +26,7 @@ namespace DynamicBridge.Gui
         private static string[] Filters = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
         private static bool[] OnlySelected = new bool[20];
         private static string CurrentDrag = "";
-
+        private static Dictionary<int, bool> showDayNightCycleDict = [];
         public static void Draw()
         {
             if(UI.Profile != null)
@@ -253,7 +253,7 @@ namespace DynamicBridge.Gui
                         }
                         filterCnt++;
 
-                        if(C.Cond_Time)
+                        if(C.Cond_Time && !C.Cond_Time_Precise)
                         {
                             ImGui.TableNextColumn();
                             //Time
@@ -272,6 +272,40 @@ namespace DynamicBridge.Gui
                                 ImGui.EndCombo();
                             }
                             if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                        }
+                        else if(C.Cond_Time && C.Cond_Time_Precise)
+                        {
+                            ImGui.TableNextColumn();
+                            if(!showDayNightCycleDict.ContainsKey(i))
+                            {
+                                showDayNightCycleDict[i] = false;
+                            }
+                            //Precise Time
+                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                            if(!showDayNightCycleDict[i] && ImGui.Button($"Open Time Editor##{i}"))
+                            {
+                                showDayNightCycleDict[i] = true;
+                            }
+                            else if(showDayNightCycleDict[i] && ImGui.Button($"Close Time Editor##{i}"))
+                            {
+                                showDayNightCycleDict[i] = false;
+                            }
+                            var windowPos = ImGui.GetCursorScreenPos();
+                            if(showDayNightCycleDict[i])
+                            {
+                                ImGui.SetNextWindowPos(windowPos);
+                                // ImGui.SetNextWindowSize(new Vector2(400, 80), ImGuiCond.Always);
+                                var open = showDayNightCycleDict[i];
+                                ImGui.Begin($"Time Editor##{i}", ref open, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar);
+
+                                rule.Precise_Times = RenderTimeline(rule.Precise_Times);
+                                if(!ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows) && ImGui.IsAnyMouseDown())
+                                {
+                                    showDayNightCycleDict[i] = false;
+                                }
+
+                                ImGui.End();
+                            }
                         }
                         filterCnt++;
 
@@ -582,33 +616,33 @@ namespace DynamicBridge.Gui
                         }
                         filterCnt++;
 
-                        if (C.Cond_Players)
+                        if(C.Cond_Players)
                         {
                             ImGui.TableNextColumn();
-                            
+
                             // Player Selection Dropdown
                             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if (ImGui.BeginCombo("##players", rule.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}").PrintRange(rule.Not.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
+                            if(ImGui.BeginCombo("##players", rule.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}").PrintRange(rule.Not.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
                             {
                                 FiltersSelection();
 
-                                foreach (var player in C.selectedPlayers)
+                                foreach(var player in C.selectedPlayers)
                                 {
                                     var name = player.Name;
 
                                     // Apply filtering
-                                    if (Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase))
+                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase))
                                         continue;
-                                    if (OnlySelected[filterCnt] && !rule.Players.Contains(name))
+                                    if(OnlySelected[filterCnt] && !rule.Players.Contains(name))
                                         continue;
 
                                     DrawSelector($"{name}##{player.Name}", player.Name, rule.Players, rule.Not.Players);
                                 }
 
                                 // Handle players that no longer exist in `C.selectedPlayers` but are still in `rule.Players`
-                                foreach (var z in rule.Players)
+                                foreach(var z in rule.Players)
                                 {
-                                    if (!C.selectedPlayers.Any(p => p.Name == z))
+                                    if(!C.selectedPlayers.Any(p => p.Name == z))
                                     {
                                         ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
                                         ImGuiEx.CollectionCheckbox($"{z}", z, rule.Players, delayedOperation: true);
@@ -619,7 +653,7 @@ namespace DynamicBridge.Gui
                                 ImGui.EndCombo();
                             }
 
-                            if (fullList != null) 
+                            if(fullList != null)
                                 ImGuiEx.Tooltip(UI.AnyNotice + fullList);
                         }
                         filterCnt++;
@@ -639,7 +673,7 @@ namespace DynamicBridge.Gui
                                     if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
                                     if(OnlySelected[filterCnt] && !rule.SelectedPresets.Contains(name)) continue;
                                     if(x.GetFolder(Profile)?.HiddenFromSelection == true) continue;
-                                    if (ImGuiEx.CollectionCheckbox($"{x.CensoredName}##{x.GUID}", x.Name, rule.SelectedPresets))
+                                    if(ImGuiEx.CollectionCheckbox($"{x.CensoredName}##{x.GUID}", x.Name, rule.SelectedPresets))
                                     {
                                         rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
                                     }
@@ -648,7 +682,7 @@ namespace DynamicBridge.Gui
                                 {
                                     if(designs.Any(d => d.Name == x && d.GetFolder(Profile)?.HiddenFromSelection != true)) continue;
                                     ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                                    if (ImGuiEx.CollectionCheckbox($"{x}", x, rule.SelectedPresets, false, true))
+                                    if(ImGuiEx.CollectionCheckbox($"{x}", x, rule.SelectedPresets, false, true))
                                     {
                                         rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
                                     }
@@ -666,19 +700,23 @@ namespace DynamicBridge.Gui
                         {
                             Safe(() => Clipboard.SetText(JsonConvert.SerializeObject(rule)));
                         }
-                        if (C.StickyPresets && C.Sticky){
+                        if(C.StickyPresets && C.Sticky)
+                        {
                             ImGui.SameLine();
                             if(ImGuiEx.IconButton(FontAwesomeIcon.Dice))
                             {
-                                if (rule.SelectedPresets.Count > 1) {
+                                if(rule.SelectedPresets.Count > 1)
+                                {
                                     var old = rule.StickyRandom;
                                     rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
                                     P.ForceUpdate = true;
-                                    if (rule.StickyRandom == old) {
-                                        rule.StickyRandom = (rule.StickyRandom + 1)%rule.SelectedPresets.Count;
-                                    };
+                                    if(rule.StickyRandom == old)
+                                    {
+                                        rule.StickyRandom = (rule.StickyRandom + 1) % rule.SelectedPresets.Count;
+                                    }
+                                    ;
                                 }
-                                else {rule.StickyRandom = 0;}
+                                else { rule.StickyRandom = 0; }
                             }
                             ImGuiEx.Tooltip($"Randomize Preset Used.");
                         }
@@ -825,6 +863,232 @@ private static IEnumerable<(uint Id, string Name, string DataCenter)> GetChinese
             {
                 ImGuiEx.Tooltip($"如果匹配到任何被打×的条件，规则不会被应用。");
             }
+        }
+        private static List<TimelineSegment> RenderTimeline(List<TimelineSegment> precise_Times)
+        {
+
+            var cursorPos = ImGui.GetCursorScreenPos();
+            var drawList = ImGui.GetWindowDrawList();
+            var startX = cursorPos.X + ImGui.CalcTextSize("12:00 AM").X / 2;
+            var endX = startX + ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("12:00 AM").X;
+            var timelineWidth = endX - startX;
+            var centerY = cursorPos.Y + 20;
+            float height = 0;
+
+            var timePoints = GetPoints(precise_Times);
+            var segmentStates = GetStates(precise_Times);
+
+            // Hover tooltip
+            var mousePos = ImGui.GetMousePos();
+            var hoveringTimeline = mousePos.Y > centerY - 5 && mousePos.Y < centerY + 5 && mousePos.X >= startX && mousePos.X <= endX;
+            var hoverTime = (float)(Math.Round((mousePos.X - startX) / timelineWidth * 24 * 60 / 5.0) * 5) / (24 * 60);
+            timePoints = timePoints.Distinct().OrderBy(x => x).ToList();
+            for(var i = 0; i < timePoints.Count - 1; i++)
+            {
+                var x1 = startX + timePoints[i] * timelineWidth;
+                var x2 = startX + timePoints[i + 1] * timelineWidth;
+
+                var segmentState = precise_Times[i].State;
+                var color = segmentState switch
+                {
+                    1 => ImGui.GetColorU32(new Vector4(0, 1, 0, 1)),
+                    _ => ImGui.GetColorU32(new Vector4(1, 1, 1, 1))
+                };
+                if(C.AllowNegativeConditions)
+                {
+                    color = segmentState switch
+                    {
+                        1 => ImGui.GetColorU32(new Vector4(0, 1, 0, 1)),
+                        2 => ImGui.GetColorU32(new Vector4(1, 0, 0, 1)),
+                        _ => ImGui.GetColorU32(new Vector4(1, 1, 1, 1))
+                    };
+                }
+
+                drawList.AddLine(new Vector2(x1, centerY), new Vector2(x2, centerY), color, 2f);
+
+                if(ImGui.IsMouseClicked(ImGuiMouseButton.Left) && x1 < mousePos.X && mousePos.X <= x2 && Math.Abs(mousePos.Y - centerY) <= 7)
+                {
+                    var segment = precise_Times[i];
+                    var stateLimit = C.AllowNegativeConditions ? 3 : 2;
+                    segment.State = (segment.State + 1) % stateLimit;
+                    precise_Times[i] = segment;
+                }
+
+                if(ImGui.IsMouseClicked(ImGuiMouseButton.Right) && x1 < mousePos.X && mousePos.X <= x2 && Math.Abs(mousePos.Y - centerY) <= 7)
+                {
+                    var segment = precise_Times[i];
+                    var stateLimit = C.AllowNegativeConditions ? 3 : 2;
+                    segment.State = (segment.State - 1 + stateLimit) % stateLimit;
+                    precise_Times[i] = segment;
+                }
+            }
+
+            List<Vector2> labelBoundryBoxes = [];
+            // Draw points + Identify if removeable
+            var hoverLabel = FormatTime(hoverTime);
+            var tooltipText = $"{hoverLabel} | Mouse Middle to add";
+            for(var i = 0; i < timePoints.Count; i++)
+            {
+                var xPos = startX + timePoints[i] * timelineWidth;
+                var pointPos = new Vector2(xPos, centerY);
+                var color = ImGui.GetColorU32(new Vector4(0.2f, 0.6f, 1f, 1f));
+                if(hoveringTimeline && Math.Abs(hoverTime - timePoints[i]) < 10f / timelineWidth)
+                {
+                    color = ImGui.GetColorU32(new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+                }
+                var label = FormatTime(timePoints[i]);
+
+                if(hoveringTimeline && Math.Abs(hoverTime - timePoints[i]) < 10f / timelineWidth)
+                {
+                    if(timePoints[i] == 0f || timePoints[i] == 1f) { tooltipText = $"{label} | May not remove"; }
+                    else { tooltipText = $"{label} | Mouse Middle to remove."; }
+                }
+
+                var textSize = ImGui.CalcTextSize(label);
+
+                var labelX = xPos - textSize.X / 2;
+                var labelY = centerY + 5;
+
+                foreach(var box in labelBoundryBoxes)
+                {
+                    if(labelX < box.X && labelY == box.Y)
+                    {
+                        labelY += textSize.Y + 2;
+                        drawList.AddLine(pointPos, new Vector2(xPos, labelY), ImGui.GetColorU32(new Vector4(1, 1, 1, 1)), 1.0f);
+                    }
+                }
+
+                drawList.AddText(new Vector2(labelX, labelY), ImGui.GetColorU32(new Vector4(1, 1, 1, 1)), label);
+                if(labelY + textSize.Y - cursorPos.Y + 20 > height)
+                {
+                    height = labelY + textSize.Y - cursorPos.Y + 20;
+                }
+                labelBoundryBoxes.Add(new Vector2(xPos + textSize.X / 2, labelY));
+                drawList.AddCircleFilled(pointPos, 5f, color);
+            }
+            if(hoveringTimeline)
+            {
+                ImGui.SetTooltip(tooltipText);
+            }
+
+            timePoints = timePoints.Distinct().OrderBy(x => Vector2.Distance(mousePos, new Vector2(startX + x * timelineWidth, centerY))).ToList();
+            if(hoveringTimeline && ImGui.IsMouseClicked(ImGuiMouseButton.Middle))
+            {
+                if(Math.Abs(hoverTime - timePoints[0]) < 10f / timelineWidth)
+                {
+                    if(!(timePoints[0] == 0f || timePoints[0] == 1f))
+                    {
+                        RemoveSegment(precise_Times, hoverTime, timelineWidth);
+                    }
+                }
+                else if(Math.Abs(hoverTime - timePoints[0]) > 10f / timelineWidth)
+                {
+                    AddSegment(precise_Times, hoverTime);
+                }
+            }
+            ImGui.SetWindowSize(new Vector2(400, height), ImGuiCond.Always);
+            return precise_Times;
+        }
+        private static void AddSegment(List<TimelineSegment> precise_Times, float hoverTime)
+        {
+            for(var i = 0; i < precise_Times.Count; i++)
+            {
+                var segment = precise_Times[i];
+
+                if(hoverTime > segment.Start && hoverTime < segment.End)
+                {
+                    // Remove the original segment
+                    precise_Times.RemoveAt(i);
+
+                    // Create two new segments
+                    var firstSegment = new TimelineSegment(segment.Start, hoverTime, segment.State);
+                    var secondSegment = new TimelineSegment(hoverTime, segment.End, segment.State);
+
+                    // Insert the new segments in place of the removed one
+                    precise_Times.Insert(i, secondSegment);
+                    precise_Times.Insert(i, firstSegment);
+
+                    return; // Exit after modification to prevent further iteration
+                }
+            }
+        }
+        private static void RemoveSegment(List<TimelineSegment> precise_Times, float hoverTime, float timelineWidth)
+        {
+            var pixelTolerance = 10f / timelineWidth;
+            var closestIndex = -1;
+            var closestDistance = float.MaxValue;
+
+            // Find the closest valid segment split within tolerance
+            for(var i = 0; i < precise_Times.Count - 1; i++)
+            {
+                var first = precise_Times[i];
+                var second = precise_Times[i + 1];
+
+                var endDistance = Math.Abs(first.End - hoverTime);
+                var startDistance = Math.Abs(second.Start - hoverTime);
+
+                if(endDistance <= pixelTolerance && startDistance <= pixelTolerance)
+                {
+                    var totalDistance = endDistance + startDistance;
+                    if(totalDistance < closestDistance)
+                    {
+                        closestDistance = totalDistance;
+                        closestIndex = i;
+                    }
+                }
+            }
+
+            // If a valid closest segment was found, merge it
+            if(closestIndex != -1)
+            {
+                var first = precise_Times[closestIndex];
+                var second = precise_Times[closestIndex + 1];
+
+                // Create a merged segment
+                var mergedSegment = new TimelineSegment(first.Start, second.End, first.State);
+
+                // Remove the two segments
+                precise_Times.RemoveAt(closestIndex + 1);
+                precise_Times.RemoveAt(closestIndex);
+
+                // Insert the merged segment
+                precise_Times.Insert(closestIndex, mergedSegment);
+            }
+        }
+
+        private static List<int> GetStates(List<TimelineSegment> precise_Times)
+        {
+            List<int> segments = [];
+            foreach(var time in precise_Times)
+            {
+                segments.Add(time.State);
+            }
+            return segments;
+        }
+
+        private static List<float> GetPoints(List<TimelineSegment> precise_Times)
+        {
+            List<float> floats = [];
+            foreach(var time in precise_Times)
+            {
+                floats.Add(time.Start);
+            }
+            floats.Add(precise_Times.Last().End);
+            return floats;
+        }
+
+        private static string FormatTime(float time)
+        {
+            var totalMinutes = (int)(time * 24 * 60);
+            var hours = (totalMinutes / 60) % 24;
+
+            totalMinutes = (int)(Math.Round(totalMinutes / 5.0) * 5);
+            var minutes = totalMinutes % 60;
+            var period = hours > 12 ? "PM" : "AM";
+
+            hours = hours % 12;
+            if(hours == 0) hours = 12;
+            return $"{hours}:{minutes:D2} {period}";
         }
     }
 }

@@ -1,4 +1,5 @@
 using DynamicBridge.Configuration;
+using DynamicBridge.Core;
 using DynamicBridge.IPC.Glamourer;
 using Lumina.Excel.Sheets;
 using System;
@@ -52,11 +53,11 @@ public static class GuiSettings
 
             ImGuiEx.HelpMarker("Please ensure \"Revert Manual Changes on Zone Change\" is unchecked in Glamourer Behavior Settings");
             ImGui.Checkbox($"Attempt to preserve rules", ref C.Sticky);
-            if (C.Sticky)
+            if(C.Sticky)
             {
                 ImGuiEx.Spacing();
                 ImGuiEx.SetNextItemWidthScaled(200f);
-                ImGuiEx.EnumCombo($"Randomize on Login", ref C.RandomChoosenType);
+                ImGuiEx.EnumCombo($"Randomizer Setting", ref C.RandomChoosenType);
                 if (C.RandomChoosenType == RandomTypes.Timer) {
                     ImGui.SameLine();
                     ImGui.Text("|");
@@ -64,16 +65,17 @@ public static class GuiSettings
                     ImGui.Text("How often should it randomize everything in minutes:");
                     ImGui.SameLine();
                     ImGuiEx.SetNextItemWidthScaled(200f);
-                    if (ImGui.InputDouble("", ref C.UserInputRandomizerTime))
+                    if(ImGui.InputDouble("", ref C.UserInputRandomizerTime))
                     {
                         double ReloadSpeed = 1;
-                        if (!C.ForceUpdateOnRandomize) 
+                        if(!C.ForceUpdateOnRandomize)
                         {
                             ReloadSpeed = 0.1;
                         }
                         C.UserInputRandomizerTime = Math.Max(ReloadSpeed, C.UserInputRandomizerTime);
-                    };
-                    ImGuiEx.Spacing();ImGuiEx.Spacing();
+                    }
+                    ;
+                    ImGuiEx.Spacing(); ImGuiEx.Spacing();
                     ImGui.Checkbox("Force update on randomize", ref C.ForceUpdateOnRandomize);
                 }
                 ImGuiEx.Spacing();
@@ -130,6 +132,24 @@ public static class GuiSettings
                 () => ImGui.Checkbox($"附近玩家", ref C.Cond_Players),
             ],
                 (int)(ImGui.GetContentRegionAvail().X / 180f), ImGuiTableFlags.BordersInner);
+            if(C.Cond_Time)
+            {
+                ImGui.Separator();
+                ImGui.Checkbox("Enable Precise Time", ref C.Cond_Time_Precise);
+                if(C.Cond_Time_Precise)
+                {
+                    ImGui.SameLine();
+                    if(ImGui.Button("Convert all Simple Times to Precise Times") && ImGui.GetIO().KeyCtrl)
+                    {
+                        ConvertTimeRules();
+                    }
+                    ImGuiEx.Tooltip("Hold CTRL+Click, deletes all current Precise Times");
+                }
+            }
+            else
+            {
+                C.Cond_Time_Precise = false;
+            }
             ImGuiGroup.EndGroupBox();
         }
 
@@ -198,6 +218,25 @@ public static class GuiSettings
         {
             GuiAbout.Draw();
             ImGuiGroup.EndGroupBox();
+        }
+    }
+
+    private static void ConvertTimeRules()
+    {
+        foreach(var profile in C.ProfilesL)
+        {
+            foreach(var rule in profile.Rules)
+            {
+                rule.Precise_Times = [
+                    new TimelineSegment(0f / 24, 5f / 24, rule.Not.Times.Contains(ETime.Night) ? 2 : rule.Times.Contains(ETime.Night) ? 1 : 0),
+                    new TimelineSegment(5f / 24, 7f / 24, rule.Not.Times.Contains(ETime.Dawn) ? 2 : rule.Times.Contains(ETime.Dawn) ? 1 : 0),
+                    new TimelineSegment(7f / 24, 12f / 24, rule.Not.Times.Contains(ETime.Morning) ? 2 : rule.Times.Contains(ETime.Morning) ? 1 : 0),
+                    new TimelineSegment(12f / 24, 17f / 24, rule.Not.Times.Contains(ETime.Day) ? 2 : rule.Times.Contains(ETime.Day) ? 1 : 0),
+                    new TimelineSegment(17f / 24, 19f / 24, rule.Not.Times.Contains(ETime.Dusk) ? 2 : rule.Times.Contains(ETime.Dusk) ? 1 : 0),
+                    new TimelineSegment(19f / 24, 22f / 24, rule.Not.Times.Contains(ETime.Evening) ? 2 : rule.Times.Contains(ETime.Evening) ? 1 : 0),
+                    new TimelineSegment(22f / 24, 24f / 24, rule.Not.Times.Contains(ETime.Night) ? 2 : rule.Times.Contains(ETime.Night) ? 1 : 0)
+                ];
+            }
         }
     }
 

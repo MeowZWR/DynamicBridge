@@ -33,4 +33,12 @@ public static unsafe class ETimeChecker
         if(date.Hour < 22) return ETime.傍晚;
         return ETime.夜晚;
     }
+
+    public static float GetEorzeanTime() => GetTime(*ET);
+    public static float GetTime(long time)
+    {
+        var date = DateTimeOffset.FromUnixTimeSeconds(time);
+        // PluginLog.Information(((date.Hour*60+date.Minute)/(float)(24*60)).ToString());
+        return (date.Hour * 60 + date.Minute) / (float)(24 * 60);
+    }
 }
