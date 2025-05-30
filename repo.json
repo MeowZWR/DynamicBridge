@@ -11,7 +11,7 @@
     "ApplicableVersion": "any",
     "DalamudApiLevel": 12,
     "TestingDalamudApiLevel": 12,
-    "IconUrl": "https://meowrs.com/https://github.com/MeowZWR/DynamicBridge/raw/cn/DynamicBridge/images/icon.png",
+    "IconUrl": "https://static.meowrs.com/Plugins/DynamicBridge/icon.png",
     "ImageUrls": [],
     "IsHide": false,
     "IsTestingExclusive": false,
