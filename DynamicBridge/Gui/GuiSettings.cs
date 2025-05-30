@@ -223,18 +223,18 @@ public static class GuiSettings
 
     private static void ConvertTimeRules()
     {
-        foreach(var profile in C.ProfilesL)
+        foreach (var profile in C.ProfilesL)
         {
-            foreach(var rule in profile.Rules)
+            foreach (var rule in profile.Rules)
             {
                 rule.Precise_Times = [
-                    new TimelineSegment(0f / 24, 5f / 24, rule.Not.Times.Contains(ETime.Night) ? 2 : rule.Times.Contains(ETime.Night) ? 1 : 0),
-                    new TimelineSegment(5f / 24, 7f / 24, rule.Not.Times.Contains(ETime.Dawn) ? 2 : rule.Times.Contains(ETime.Dawn) ? 1 : 0),
-                    new TimelineSegment(7f / 24, 12f / 24, rule.Not.Times.Contains(ETime.Morning) ? 2 : rule.Times.Contains(ETime.Morning) ? 1 : 0),
-                    new TimelineSegment(12f / 24, 17f / 24, rule.Not.Times.Contains(ETime.Day) ? 2 : rule.Times.Contains(ETime.Day) ? 1 : 0),
-                    new TimelineSegment(17f / 24, 19f / 24, rule.Not.Times.Contains(ETime.Dusk) ? 2 : rule.Times.Contains(ETime.Dusk) ? 1 : 0),
-                    new TimelineSegment(19f / 24, 22f / 24, rule.Not.Times.Contains(ETime.Evening) ? 2 : rule.Times.Contains(ETime.Evening) ? 1 : 0),
-                    new TimelineSegment(22f / 24, 24f / 24, rule.Not.Times.Contains(ETime.Night) ? 2 : rule.Times.Contains(ETime.Night) ? 1 : 0)
+                    new TimelineSegment(0f / 24, 5f / 24, rule.Not.Times.Contains(ETime.夜晚) ? 2 : rule.Times.Contains(ETime.夜晚) ? 1 : 0),
+                   new TimelineSegment(5f / 24, 7f / 24, rule.Not.Times.Contains(ETime.黎明) ? 2 : rule.Times.Contains(ETime.黎明) ? 1 : 0),
+                   new TimelineSegment(7f / 24, 12f / 24, rule.Not.Times.Contains(ETime.早晨) ? 2 : rule.Times.Contains(ETime.早晨) ? 1 : 0),
+                   new TimelineSegment(12f / 24, 17f / 24, rule.Not.Times.Contains(ETime.下午) ? 2 : rule.Times.Contains(ETime.下午) ? 1 : 0),
+                   new TimelineSegment(17f / 24, 19f / 24, rule.Not.Times.Contains(ETime.黄昏) ? 2 : rule.Times.Contains(ETime.黄昏) ? 1 : 0),
+                   new TimelineSegment(19f / 24, 22f / 24, rule.Not.Times.Contains(ETime.傍晚) ? 2 : rule.Times.Contains(ETime.傍晚) ? 1 : 0),
+                   new TimelineSegment(22f / 24, 24f / 24, rule.Not.Times.Contains(ETime.夜晚) ? 2 : rule.Times.Contains(ETime.夜晚) ? 1 : 0)
                 ];
             }
         }
