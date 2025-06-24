@@ -628,7 +628,52 @@ public static unsafe class GuiRules
                         {
                             if(cond == Job.ADV) continue;
                             if(cond.IsUpgradeable() && C.UnifyJobs) continue;
-                            var name = cond.ToString().Replace("_", " ");
+                            var name = cond switch
+                            {
+                                Job.GLA => "剑术师",
+                                Job.PGL => "格斗家",
+                                Job.MRD => "斧术师",
+                                Job.LNC => "枪术师",
+                                Job.ARC => "弓箭手",
+                                Job.CNJ => "幻术师",
+                                Job.THM => "咒术师",
+                                Job.CRP => "刻木工",
+                                Job.BSM => "铁匠",
+                                Job.ARM => "铸甲师",
+                                Job.GSM => "雕金工",
+                                Job.LTW => "制革匠",
+                                Job.WVR => "裁衣师",
+                                Job.ALC => "炼金术师",
+                                Job.CUL => "烹调师",
+                                Job.MIN => "采矿工",
+                                Job.BTN => "园艺工",
+                                Job.FSH => "捕鱼人",
+                                Job.PLD => "骑士",
+                                Job.MNK => "武僧",
+                                Job.WAR => "战士",
+                                Job.DRG => "龙骑士",
+                                Job.BRD => "吟游诗人",
+                                Job.WHM => "白魔法师",
+                                Job.BLM => "黑魔法师",
+                                Job.ACN => "秘术师",
+                                Job.SMN => "召唤师",
+                                Job.SCH => "学者",
+                                Job.ROG => "双剑师",
+                                Job.NIN => "忍者",
+                                Job.MCH => "机工士",
+                                Job.DRK => "暗黑骑士",
+                                Job.AST => "占星术士",
+                                Job.SAM => "武士",
+                                Job.RDM => "赤魔法师",
+                                Job.BLU => "青魔法师",
+                                Job.GNB => "绝枪战士",
+                                Job.DNC => "舞者",
+                                Job.RPR => "钐镰客",
+                                Job.SGE => "贤者",
+                                Job.VPR => "蝰蛇剑士",
+                                Job.PCT => "绘灵法师",
+                                _ => cond.ToString().Replace("_", " ")
+                            };
                             if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
                             if(OnlySelected[filterCnt] && !rule.Jobs.Contains(cond)) continue;
                             if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)cond.GetIcon(), false, out var texture))
