@@ -783,13 +783,13 @@ public static class GuiPresets
                             ImGuiEx.SetNextItemFullWidth();
                         }
                         string fullList = null;
-                        if(ImGui.BeginCombo("##penumbra", preset.PenumbraType != SpecialPenumbraAssignment.Use_Named_Collection ? preset.PenumbraType.ToString().Replace("_", " ") : preset.Penumbra.PrintRange(out fullList, "- 未选择 -"), C.ComboSize))
+                        if(ImGui.BeginCombo("##penumbra", preset.PenumbraType != SpecialPenumbraAssignment.使用独立分配 ? preset.PenumbraType.ToString().Replace("_", " ") : preset.Penumbra.PrintRange(out fullList, "- 未选择 -"), C.ComboSize))
                         {
                             ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, Utils.IndentSpacing);
                             if(ImGui.IsWindowAppearing()) Utils.ResetCaches();
                             ImGuiEx.Text($"分配类型:");
                             ImGuiEx.EnumCombo($"##asstype", ref preset.PenumbraType);
-                            if(preset.PenumbraType == SpecialPenumbraAssignment.Use_Named_Collection)
+                            if(preset.PenumbraType == SpecialPenumbraAssignment.使用独立分配)
                             {
                                 FiltersSelection();
                                 var collections = P.PenumbraManager.GetCollectionNames().Order();

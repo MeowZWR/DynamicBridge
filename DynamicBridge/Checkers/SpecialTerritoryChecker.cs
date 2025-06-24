@@ -70,7 +70,6 @@ public static class SpecialTerritoryChecker
         [SpecialTerritory.Residential_area] = "住宅区",
         [SpecialTerritory.Duty] = "任务",
         [SpecialTerritory.City] = "城市",
-        [SpecialTerritory.None] = "无",
     };
 
     public static bool Check(this SpecialTerritory terr)

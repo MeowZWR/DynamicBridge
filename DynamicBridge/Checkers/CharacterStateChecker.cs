@@ -1,25 +1,25 @@
 ﻿using ECommons.GameHelpers;
 using ECommons.Throttlers;
 
-namespace DynamicBridge.Core
+namespace DynamicBridge.Core;
+
+public static class CharacterStateChecker
 {
-    public static class CharacterStateChecker
+    private static readonly Dictionary<CharacterState, Func<bool>> States = new()
     {
-        private static readonly Dictionary<CharacterState, Func<bool>> States = new()
-        {
-            [CharacterState.游泳] = () => Svc.Condition[ConditionFlag.Swimming] && Utils.IsMoving,
-            [CharacterState.浮水] = () => Svc.Condition[ConditionFlag.Swimming] && !Utils.IsMoving,
-            [CharacterState.地面坐骑] = () => Svc.Condition[ConditionFlag.Mounted] && !Svc.Condition[ConditionFlag.InFlight] && !Svc.Condition[ConditionFlag.Diving],
-            [CharacterState.水下坐骑] = () => Svc.Condition[ConditionFlag.Mounted] && Svc.Condition[ConditionFlag.Diving],
-            [CharacterState.空中坐骑] = () => Svc.Condition[ConditionFlag.Mounted] && Svc.Condition[ConditionFlag.InFlight],
-            [CharacterState.潜水] = () => Svc.Condition[ConditionFlag.Diving] && !Svc.Condition[ConditionFlag.Mounted],
-            [CharacterState.涉水] = () => !Svc.Condition[ConditionFlag.Diving] && !Svc.Condition[ConditionFlag.Swimming] && Utils.IsInWater,
-            [CharacterState.观看过场动画] = () => Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent]
-                || Svc.Condition[ConditionFlag.WatchingCutscene78],
-            [CharacterState.战斗中] = () => Svc.Condition[ConditionFlag.InCombat],
-            [CharacterState.无法战斗] = () => Player.Available && Player.Object.IsDead,
-            [CharacterState.制作中] = () => Svc.Condition[ConditionFlag.Crafting]
-        };
+        [CharacterState.游泳] = () => Svc.Condition[ConditionFlag.Swimming] && Utils.IsMoving,
+        [CharacterState.浮水] = () => Svc.Condition[ConditionFlag.Swimming] && !Utils.IsMoving,
+        [CharacterState.地面坐骑] = () => Svc.Condition[ConditionFlag.Mounted] && !Svc.Condition[ConditionFlag.InFlight] && !Svc.Condition[ConditionFlag.Diving],
+        [CharacterState.水下坐骑] = () => Svc.Condition[ConditionFlag.Mounted] && Svc.Condition[ConditionFlag.Diving],
+        [CharacterState.空中坐骑] = () => Svc.Condition[ConditionFlag.Mounted] && Svc.Condition[ConditionFlag.InFlight],
+        [CharacterState.潜水] = () => Svc.Condition[ConditionFlag.Diving] && !Svc.Condition[ConditionFlag.Mounted],
+        [CharacterState.涉水] = () => !Svc.Condition[ConditionFlag.Diving] && !Svc.Condition[ConditionFlag.Swimming] && Utils.IsInWater,
+        [CharacterState.观看过场动画] = () => Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent]
+            || Svc.Condition[ConditionFlag.WatchingCutscene78],
+        [CharacterState.战斗中] = () => Svc.Condition[ConditionFlag.InCombat],
+        [CharacterState.死亡] = () => Player.Available && Player.Object.IsDead,
+        [CharacterState.制作中] = () => Svc.Condition[ConditionFlag.Crafting]
+    };
 
     public static bool Check(this CharacterState state)
     {
