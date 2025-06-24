@@ -1,11 +1,5 @@
 ﻿using ECommons.GameHelpers;
 using ECommons.Throttlers;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DynamicBridge.Core
 {
@@ -27,14 +21,13 @@ namespace DynamicBridge.Core
             [CharacterState.制作中] = () => Svc.Condition[ConditionFlag.Crafting]
         };
 
-        public static bool Check(this CharacterState state)
+    public static bool Check(this CharacterState state)
+    {
+        if(States.TryGetValue(state, out var func))
         {
-            if(States.TryGetValue(state, out var func))
-            {
-                return func();
-            }
-            if(EzThrottler.Throttle("ErrorReport", 10000)) DuoLog.Error($"Cound not find checker for state {state}. Please report this error with logs.");
-            return false;
+            return func();
         }
+        if(EzThrottler.Throttle("ErrorReport", 10000)) DuoLog.Error($"Cound not find checker for state {state}. Please report this error with logs.");
+        return false;
     }
 }

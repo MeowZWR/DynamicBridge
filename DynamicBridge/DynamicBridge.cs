@@ -7,12 +7,10 @@ using DynamicBridge.IPC.Glamourer;
 using DynamicBridge.IPC.Honorific;
 using DynamicBridge.IPC.Moodles;
 using DynamicBridge.IPC.Penumbra;
-using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.ChatMethods;
 using ECommons.Configuration;
 using ECommons.Events;
-using ECommons.ExcelServices;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
 using ECommons.SimpleGui;
@@ -22,7 +20,6 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 
 namespace DynamicBridge;
 
@@ -56,6 +53,9 @@ public unsafe class DynamicBridge : IDalamudPlugin
 
     private DateTime RandomizerTimer;
     private bool RandomizedRecently = false;
+
+    public ulong CacheVersion = 1;
+
     public DynamicBridge(IDalamudPluginInterface pi)
     {
         P = this;
@@ -147,7 +147,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
         {
             if(C.StickyPresets && C.Sticky)
             {
-                foreach(var rule in profile.Rules)
+                foreach(var rule in profile.GetRulesUnion(true))
                 {
                     rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
                 }
@@ -168,11 +168,11 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 }
                 if(C.StickyPenumbra && C.Sticky)
                 {
-                preset.StickyRandomP = Random.Shared.Next(0, preset.Penumbra.Count);
+                    preset.StickyRandomP = Random.Shared.Next(0, preset.Penumbra.Count);
                 }
             }
         }
-        ForceUpdate = C.ForceUpdateOnRandomize && C.Sticky && (C.StickyPresets||C.StickyCustomize||C.StickyGlamourer||C.StickyHonorific||C.StickyPenumbra) && (C.UserInputRandomizerTime >= 0.75);
+        ForceUpdate = C.ForceUpdateOnRandomize && C.Sticky && (C.StickyPresets || C.StickyCustomize || C.StickyGlamourer || C.StickyHonorific || C.StickyPenumbra) && (C.UserInputRandomizerTime >= 0.75);
 
         RandomizedRecently = false;
     }
@@ -213,7 +213,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 var profile = Utils.Profile();
                 if(profile != null)
                 {
-                    profile.Presets.Each(x => x.IsStatic = false);
+                    profile.GetPresetsUnion().Each(x => x.IsStatic = false);
                     Notify.Success($"Using dynamic rules now.");
                     P.ForceUpdate = true;
                 }
@@ -274,7 +274,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
 
     private void OnUpdate()
     {
-        if(Player.Interactable)
+        if(Player.Interactable && !Svc.Condition[ConditionFlag.Fishing])
         {
             if(LastJob != Player.Object.ClassJob.RowId)
             {
@@ -320,7 +320,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
                     }
                     else
                     {
-                        foreach(var x in profile.Rules)
+                        foreach(var x in profile.GetRulesUnion(true))
                         {
                             if(
                                 x.Enabled
@@ -533,6 +533,11 @@ public unsafe class DynamicBridge : IDalamudPlugin
                 if(EzThrottler.Throttle("LogoutUpdateGS", 30000)) Utils.UpdateGearsetCache();
                 if(C.EnablePenumbra) PenumbraManager.UnsetAssignmentIfNeeded();
             }
+
+            /*if(!GenericHelpers.IsScreenReady() || EzConfigGui.Window.IsOpen)
+            {
+                CacheVersion++;
+            }*/
         }
         else
         {
@@ -540,6 +545,7 @@ public unsafe class DynamicBridge : IDalamudPlugin
             {
                 ForceUpdate = true;
             }
+            //CacheVersion++;
         }
     }
 

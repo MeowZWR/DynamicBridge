@@ -1,1094 +1,1122 @@
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Style;
 using DynamicBridge.Configuration;
 using DynamicBridge.Core;
-using ECommons;
+using ECommons.Configuration;
 using ECommons.ExcelServices;
-using ECommons.GameFunctions;
 using ECommons.GameHelpers;
 using ECommons.ImGuiMethods.TerritorySelection;
 using ECommons.Throttlers;
 using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
-using OtterGui.Widgets;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Action = System.Action;
 using Emote = Lumina.Excel.Sheets.Emote;
+using Weather = Lumina.Excel.Sheets.Weather;
 
-namespace DynamicBridge.Gui
+namespace DynamicBridge.Gui;
+
+public static unsafe class GuiRules
 {
-    public static unsafe class GuiRules
-    {
-        private static Vector2 iconSize => new(24f);
+    private static Vector2 iconSize => new(24f);
 
-        private static string[] Filters = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
-        private static bool[] OnlySelected = new bool[20];
-        private static string CurrentDrag = "";
-        private static Dictionary<int, bool> showDayNightCycleDict = [];
-        public static void Draw()
+    private static string[] Filters = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+    private static bool[] OnlySelected = new bool[20];
+    private static string CurrentDrag = "";
+    private static Dictionary<int, bool> showDayNightCycleDict = [];
+    private static ImGuiEx.RealtimeDragDrop<ApplyRule> DragDrop = new("MoveRuleItem", (x) => x.GUID);
+    private static string Open = null;
+    private static bool Focus = false;
+    public static void Draw()
+    {
+        if(UI.Profile != null)
         {
-            if(UI.Profile != null)
+            var currentProfile = UI.Profile;
+            currentProfile.Rules.RemoveAll(x => x == null);
+            void ButtonsLeft()
             {
-                var Profile = UI.Profile;
-                Profile.Rules.RemoveAll(x => x == null);
-                void ButtonsLeft()
+                if(ImGuiEx.IconButton(FontAwesomeIcon.Plus))
                 {
-                    if(ImGuiEx.IconButton(FontAwesomeIcon.Plus))
+                    if(Open != null && currentProfile.RulesFolders.TryGetFirst(x => x.GUID == Open, out var open))
                     {
-                        Profile.Rules.Add(new());
+                        open.Rules.Add(new());
                     }
-                    ImGuiEx.Tooltip("添加新规则");
-                    ImGui.SameLine();
-                    if(ImGuiEx.IconButton(FontAwesomeIcon.Paste, "从剪切板粘贴规则"))
+                    else
                     {
+                        currentProfile.Rules.Add(new());
+                    }
+                }
+                ImGuiEx.Tooltip("添加新规则");
+
+                ImGui.SameLine();
+                if(ImGuiEx.IconButton(FontAwesomeIcon.Paste))
+                {
+                    try
+                    {
+                        var folder = EzConfig.DefaultSerializationFactory.Deserialize<ApplyRuleFolder>(Paste()) ?? throw new NullReferenceException();
+                        if(folder.Rules.Count == 0) throw new InvalidOperationException();
+                        currentProfile.RulesFolders.Add(folder);
+                    }
+                    catch(Exception ex)
+                    {
+                        ex.LogDebug();
                         try
                         {
-                            Profile.Rules.Add(JsonConvert.DeserializeObject<ApplyRule>(Clipboard.GetText()) ?? throw new NullReferenceException());
-                        }
-                        catch(Exception e)
-                        {
-                            Notify.Error("无法从剪贴板粘贴：\n" + e.Message);
-                        }
-                    }
-                    if(Profile.IsStaticExists())
-                    {
-                        ImGuiEx.HelpMarker($"预设 {Profile.GetStaticPreset()?.CensoredName} 已被设置为静态。动态规则自动执行已禁用。", GradientColor.Get(EColor.RedBright, EColor.YellowBright, 1000), FontAwesomeIcon.ExclamationTriangle.ToIconString());
-                    }
-                    ImGui.SameLine();
-                }
-                void ButtonsRight()
-                {
-                    UI.ForceUpdateButton();
-                    ImGui.SameLine();
-                }
-
-                UI.ProfileSelectorCommon(ButtonsLeft, ButtonsRight);
-
-                var active = (bool[])[
-                    C.Cond_State,
-                    C.Cond_Biome,
-                    C.Cond_Emote,
-                    C.Cond_Gearset,
-                    C.Cond_House,
-                    C.Cond_Job,
-                    C.Cond_Time,
-                    C.Cond_Weather,
-                    C.Cond_World,
-                    C.Cond_Zone,
-                    C.Cond_ZoneGroup,
-                    C.Cond_Players,
-                ];
-
-                List<(Vector2 RowPos, Vector2 ButtonPos, Action BeginDraw, Action AcceptDraw)> MoveCommands = [];
-
-                ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
-                if(ImGui.BeginTable("##main", 3 + active.Count(x => x), ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable | ImGuiTableFlags.Reorderable))
-                {
-                    ImGui.TableSetupColumn("  ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
-                    if(C.Cond_State) ImGui.TableSetupColumn("状态");
-                    if(C.Cond_Biome) ImGui.TableSetupColumn("生物群系");
-                    if(C.Cond_Weather) ImGui.TableSetupColumn("天气");
-                    if(C.Cond_Time) ImGui.TableSetupColumn("时间");
-                    if(C.Cond_ZoneGroup) ImGui.TableSetupColumn("区域类型");
-                    if(C.Cond_Zone) ImGui.TableSetupColumn("区域");
-                    if(C.Cond_House) ImGui.TableSetupColumn("住宅");
-                    if(C.Cond_Emote) ImGui.TableSetupColumn("情感动作");
-                    if(C.Cond_Job) ImGui.TableSetupColumn("职业");
-                    if(C.Cond_World) ImGui.TableSetupColumn("服务器");
-                    if(C.Cond_Gearset) ImGui.TableSetupColumn("套装");
-                    if(C.Cond_Players) ImGui.TableSetupColumn("玩家");
-                    ImGui.TableSetupColumn("预设");
-                    ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
-                    ImGui.TableHeadersRow();
-
-                    for(var i = 0; i < Profile.Rules.Count; i++)
-                    {
-                        var filterCnt = 0;
-                        void FiltersSelection()
-                        {
-                            ImGui.SetWindowFontScale(0.8f);
-                            ImGuiEx.SetNextItemFullWidth();
-                            ImGui.InputTextWithHint($"##fltr{filterCnt}", "筛选...", ref Filters[filterCnt], 50);
-                            ImGui.Checkbox($"仅显示已选择项##{filterCnt}", ref OnlySelected[filterCnt]);
-                            ImGui.SetWindowFontScale(1f);
-                            ImGui.Separator();
-                        }
-                        var rule = Profile.Rules[i];
-                        var col = !rule.Enabled;
-                        var col2 = P.LastRule.Any(x => x.GUID == rule.GUID);
-                        if(col2) ImGui.PushStyleColor(ImGuiCol.Text, EColor.Green);
-                        if(col) ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey3);
-                        ImGui.PushID(rule.GUID);
-                        ImGui.TableNextRow();
-                        if(CurrentDrag == rule.GUID)
-                        {
-                            var color = GradientColor.Get(EColor.Green, EColor.Green with { W = EColor.Green.W / 4 }, 500).ToUint();
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, color);
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, color);
-                        }
-                        ImGui.TableNextColumn();
-
-                        //Sorting
-                        var rowPos = ImGui.GetCursorPos();
-                        ImGui.Checkbox("##enable", ref rule.Enabled);
-                        ImGuiEx.Tooltip("启用此规则");
-
-                        ImGui.SameLine();
-                        ImGui.PushFont(UiBuilder.IconFont);
-                        var cur = ImGui.GetCursorPos();
-                        var size = ImGuiHelpers.GetButtonSize(FontAwesomeIcon.ArrowsUpDownLeftRight.ToIconString());
-                        ImGui.Dummy(size);
-                        ImGui.PopFont();
-                        var moveIndex = i;
-                        MoveCommands.Add((rowPos, cur, delegate
-                        {
-                            ImGui.PushFont(UiBuilder.IconFont);
-                            ImGui.Button($"{FontAwesomeIcon.ArrowsUpDownLeftRight.ToIconString()}##Move{rule.GUID}");
-                            ImGui.PopFont();
-                            if(ImGui.IsItemHovered())
+                            var str = (EzConfig.DefaultSerializationFactory.Deserialize<ApplyRule>(Paste()));
+                            if(str != null)
                             {
-                                ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
-                            }
-                            if(ImGui.BeginDragDropSource(ImGuiDragDropFlags.SourceNoPreviewTooltip))
-                            {
-                                ImGuiDragDrop.SetDragDropPayload("MoveRule", rule.GUID);
-                                CurrentDrag = rule.GUID;
-                                InternalLog.Verbose($"DragDropSource = {rule.GUID}");
-                                ImGui.EndDragDropSource();
-                            }
-                            else if(CurrentDrag == rule.GUID)
-                            {
-                                InternalLog.Verbose($"Current drag reset!");
-                                CurrentDrag = null;
-                            }
-                        }, delegate { DragDropUtils.AcceptRuleDragDrop(Profile, moveIndex); }
-                        ));
-
-                        ImGui.SameLine();
-                        ImGui.PushFont(UiBuilder.IconFont);
-                        ImGuiEx.ButtonCheckbox("\uf103", ref rule.Passthrough);
-                        ImGui.PopFont();
-                        ImGuiEx.Tooltip("选中后忽略此规则。DynamicBridge在遍历规则时会跳过此规则继续搜索，所有规则将依次应用。");
-
-
-                        if(C.Cond_State)
-                        {
-                            ImGui.TableNextColumn();
-                            //Conditions
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##conditions", rule.States.PrintRange(rule.Not.States, out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                foreach(var cond in Enum.GetValues<CharacterState>())
+                                if(Open != null && currentProfile.RulesFolders.TryGetFirst(x => x.GUID == Open, out var open))
                                 {
-                                    var name = cond.ToString().Replace("_", " ");
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.States.Contains(cond)) continue;
-                                    if(ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "state", $"{(int)cond}.png"), out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    DrawSelector(name, cond, rule.States, rule.Not.States);
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_Biome)
-                        {
-                            ImGui.TableNextColumn();
-                            //Biome
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##biome", rule.Biomes.PrintRange(rule.Not.Biomes, out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                foreach(var cond in Enum.GetValues<Biome>())
-                                {
-                                    if(cond == Biome.No_biome) continue;
-                                    var name = cond.ToString().Replace("_", " ");
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Biomes.Contains(cond)) continue;
-                                    if(ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "biome", $"{(int)cond}.png"), out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    DrawSelector(name, cond, rule.Biomes, rule.Not.Biomes);
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_Weather)
-                        {
-                            ImGui.TableNextColumn();
-                            //Weather
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##weather", rule.Weathers.Select(x => P.WeatherManager.Weathers[x]).ToHashSet().PrintRange(rule.Not.Weathers.Select(x => P.WeatherManager.Weathers[x]).ToHashSet(), out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                foreach(var cond in P.WeatherManager.WeatherNames)
-                                {
-                                    var name = cond.Key;
-                                    if(name.IsNullOrEmpty()) continue;
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Weathers.ContainsAny(cond.Value)) continue;
-                                    if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)Svc.Data.GetExcelSheet<Weather>().GetRow(cond.Value.First()).Icon, false, out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    DrawSelector($"{cond.Key}##{cond.Value.First()}", P.WeatherManager.WeatherNames[cond.Key], rule.Weathers, rule.Not.Weathers);
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_Time && !C.Cond_Time_Precise)
-                        {
-                            ImGui.TableNextColumn();
-                            //Time
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##Time", rule.Times.PrintRange(rule.Not.Times, out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                foreach(var cond in Enum.GetValues<ETime>())
-                                {
-                                    var name = cond.ToString().Replace("_", " ");
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Times.Contains(cond)) continue;
-                                    DrawSelector(name, cond, rule.Times, rule.Not.Times);
-                                    ImGuiEx.Tooltip($"{ETimeChecker.Names[cond]}");
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        else if(C.Cond_Time && C.Cond_Time_Precise)
-                        {
-                            ImGui.TableNextColumn();
-                            if(!showDayNightCycleDict.ContainsKey(i))
-                            {
-                                showDayNightCycleDict[i] = false;
-                            }
-                            //Precise Time
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(!showDayNightCycleDict[i] && ImGui.Button($"Open Time Editor##{i}"))
-                            {
-                                showDayNightCycleDict[i] = true;
-                            }
-                            else if(showDayNightCycleDict[i] && ImGui.Button($"Close Time Editor##{i}"))
-                            {
-                                showDayNightCycleDict[i] = false;
-                            }
-                            var windowPos = ImGui.GetCursorScreenPos();
-                            if(showDayNightCycleDict[i])
-                            {
-                                ImGui.SetNextWindowPos(windowPos);
-                                // ImGui.SetNextWindowSize(new Vector2(400, 80), ImGuiCond.Always);
-                                var open = showDayNightCycleDict[i];
-                                ImGui.Begin($"Time Editor##{i}", ref open, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar);
-
-                                rule.Precise_Times = RenderTimeline(rule.Precise_Times);
-                                if(!ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows) && ImGui.IsAnyMouseDown())
-                                {
-                                    showDayNightCycleDict[i] = false;
-                                }
-
-                                ImGui.End();
-                            }
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_ZoneGroup)
-                        {
-                            ImGui.TableNextColumn();
-                            //Zone groups
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##zgroup", rule.SpecialTerritories.Select(x => SpecialTerritoryChecker.Renames.TryGetValue(x, out var s) ? s : x.ToString().Replace("_", " ")).PrintRange(rule.Not.SpecialTerritories.Select(x => SpecialTerritoryChecker.Renames.TryGetValue(x, out var s) ? s : x.ToString().Replace("_", " ")), out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                foreach(var cond in Enum.GetValues<SpecialTerritory>())
-                                {
-                                    var name = SpecialTerritoryChecker.Renames.TryGetValue(cond, out var s) ? s : cond.ToString().Replace("_", " ");
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.SpecialTerritories.Contains(cond)) continue;
-                                    if(ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "zgrp", $"{(int)cond}.png"), out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    DrawSelector(name, cond, rule.SpecialTerritories, rule.Not.SpecialTerritories);
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_Zone)
-                        {
-                            ImGui.TableNextColumn();
-                            //Zone
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##zone", rule.Territories.Select(x => ExcelTerritoryHelper.GetName(x)).PrintRange(rule.Not.Territories.Select(x => ExcelTerritoryHelper.GetName(x)), out var fullList), C.ComboSize))
-                            {
-                                if(C.AllowNegativeConditions)
-                                {
-                                    if(ImGui.Selectable("打开白名单编辑器"))
-                                    {
-                                        new TerritorySelector(rule.Territories, (terr, s) =>
-                                        {
-                                            rule.Territories = [.. s];
-                                            rule.Not.Territories.RemoveAll(x => rule.Territories.Contains(x));
-                                        })
-                                        {
-                                            ActionDrawPlaceName = DrawPlaceName,
-                                            WindowName = $"选择允许生效的区域"
-                                        };
-                                    }
-                                    if(ImGui.Selectable("打开黑名单编辑器"))
-                                    {
-                                        new TerritorySelector(rule.Territories, (terr, s) =>
-                                        {
-                                            rule.Not.Territories = [.. s];
-                                            rule.Territories.RemoveAll(x => rule.Not.Territories.Contains(x));
-                                        })
-                                        {
-                                            ActionDrawPlaceName = DrawPlaceName,
-                                            WindowName = $"选择不允许生效的区域"
-                                        };
-                                    }
+                                    open.Rules.Add(str);
                                 }
                                 else
                                 {
-                                    new TerritorySelector(rule.Territories, (terr, s) => rule.Territories = [.. s])
-                                    {
-                                        ActionDrawPlaceName = DrawPlaceName
-                                    };
-                                    ImGui.CloseCurrentPopup();
+                                    currentProfile.Rules.Add(str);
                                 }
-                                ImGui.EndCombo();
                             }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-
-                        if(C.Cond_House)
-                        {
-                            ImGui.TableNextColumn();
-                            //House
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##house", rule.Houses.Select(x => C.Houses.FirstOrDefault(h => h.ID == x)?.Name ?? $"{x:X16}").PrintRange(rule.Not.Houses.Select(x => C.Houses.FirstOrDefault(h => h.ID == x)?.Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
+                            else
                             {
-                                FiltersSelection();
-                                foreach(var z in C.Houses)
-                                {
-                                    var name = z.Name;
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Houses.Contains(z.ID)) continue;
-                                    DrawSelector(name + $"##{z.GUID}", z.ID, rule.Houses, rule.Not.Houses);
-                                }
-                                foreach(var z in rule.Houses)
-                                {
-                                    if(!C.Houses.Any(h => h.ID == z))
-                                    {
-                                        ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                                        ImGuiEx.CollectionCheckbox($"{z}", z, rule.Houses, delayedOperation: true);
-                                        ImGui.PopStyleColor();
-                                    }
-                                }
-                                ImGui.EndCombo();
+                                Notify.Error("无法从剪贴板粘贴");
                             }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
                         }
-                        filterCnt++;
-
-                        if(C.Cond_Emote)
+                        catch(Exception e)
                         {
-                            ImGui.TableNextColumn();
-                            //Emote
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##emote", rule.Emotes.Select(x => Svc.Data.GetExcelSheet<Emote>().GetRow(x).Name.ExtractText()).PrintRange(rule.Not.Emotes.Select(x => Svc.Data.GetExcelSheet<Emote>().GetRow(x).Name.ExtractText()), out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-
-                                if(Player.Available && Utils.GetAdjustedEmote() != 0)
-                                {
-                                    var id = Utils.GetAdjustedEmote();
-                                    var cond = Svc.Data.GetExcelSheet<Emote>().GetRow(id);
-                                    if(ThreadLoadImageHandler.TryGetIconTextureWrap(cond.Icon, false, out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    ImGui.PushStyleColor(ImGuiCol.Text, EColor.CyanBright);
-                                    DrawSelector($"当前：{id}/{cond.Name.ExtractText()}##{cond.RowId}", cond.RowId, rule.Emotes, rule.Not.Emotes);
-                                    ImGui.PopStyleColor();
-                                    ImGui.Separator();
-                                }
-
-                                foreach(var cond in Svc.Data.GetExcelSheet<Emote>().Where(e => e.Name.ExtractText().IsNullOrEmpty() == false || e.Icon != 0 || rule.Emotes.Contains(e.RowId)))
-                                {
-                                    var name = cond.Name.ExtractText() ?? "";
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Emotes.Contains(cond.RowId)) continue;
-                                    if(ThreadLoadImageHandler.TryGetIconTextureWrap(cond.Icon, false, out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    DrawSelector($"{name.NullWhenEmpty() ?? $"未命名/{cond.RowId}"}##{cond.RowId}", cond.RowId, rule.Emotes, rule.Not.Emotes);
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                            Notify.Error(e.Message);
                         }
-                        filterCnt++;
-
-                        if(C.Cond_Job)
-                        {
-                            ImGui.TableNextColumn();
-                            //Job
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##job", rule.Jobs.PrintRange(rule.Not.Jobs, out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                foreach(var cond in Enum.GetValues<Job>().OrderByDescending(x => Svc.Data.GetExcelSheet<ClassJob>().GetRow((uint)x).Role))
-                                {
-                                    if (cond == Job.ADV) continue;
-                                    if (cond.IsUpgradeable() && C.UnifyJobs) continue;
-                                    var name = cond switch
-                                    {
-                                        Job.GLA => "剑术师",
-                                        Job.PGL => "格斗家",
-                                        Job.MRD => "斧术师",
-                                        Job.LNC => "枪术师",
-                                        Job.ARC => "弓箭手",
-                                        Job.CNJ => "幻术师",
-                                        Job.THM => "咒术师",
-                                        Job.CRP => "刻木工",
-                                        Job.BSM => "铁匠",
-                                        Job.ARM => "铸甲师",
-                                        Job.GSM => "雕金工",
-                                        Job.LTW => "制革匠",
-                                        Job.WVR => "裁衣师",
-                                        Job.ALC => "炼金术师",
-                                        Job.CUL => "烹调师",
-                                        Job.MIN => "采矿工",
-                                        Job.BTN => "园艺工",
-                                        Job.FSH => "捕鱼人",
-                                        Job.PLD => "骑士",
-                                        Job.MNK => "武僧",
-                                        Job.WAR => "战士",
-                                        Job.DRG => "龙骑士",
-                                        Job.BRD => "吟游诗人",
-                                        Job.WHM => "白魔法师",
-                                        Job.BLM => "黑魔法师",
-                                        Job.ACN => "秘术师",
-                                        Job.SMN => "召唤师",
-                                        Job.SCH => "学者",
-                                        Job.ROG => "双剑师",
-                                        Job.NIN => "忍者",
-                                        Job.MCH => "机工士",
-                                        Job.DRK => "暗黑骑士",
-                                        Job.AST => "占星术士",
-                                        Job.SAM => "武士",
-                                        Job.RDM => "赤魔法师",
-                                        Job.BLU => "青魔法师",
-                                        Job.GNB => "绝枪战士",
-                                        Job.DNC => "舞者",
-                                        Job.RPR => "钐镰客",
-                                        Job.SGE => "贤者",
-                                        Job.VPR => "蝰蛇剑士",
-                                        Job.PCT => "绘灵法师",
-                                        _ => cond.ToString().Replace("_", " ")
-                                    };
-                                    if (Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Jobs.Contains(cond)) continue;
-                                    if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)cond.GetIcon(), false, out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    if(cond.IsUpgradeable()) ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey3);
-                                    DrawSelector(name, cond, rule.Jobs, rule.Not.Jobs);
-                                    if(cond.IsUpgradeable()) ImGui.PopStyleColor();
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_World)
-                        {
-                            ImGui.TableNextColumn();
-                            //World
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##world", rule.Worlds.ToWorldNames().PrintRange(rule.Not.Worlds.ToWorldNames(), out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-
-                                // 添加中文世界
-                                var chineseWorlds = GetChineseWorlds();
-
-                                // 先显示中文世界分组
-                                foreach (var group in chineseWorlds.GroupBy(w => w.DataCenter))
-                                {
-                                    ImGuiEx.Text($"{group.Key}");
-                                    foreach (var cond in group)
-                                    {
-                                        var name = cond.Name;
-                                        if (Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                        if (OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.Id)) continue;
-                                        ImGuiEx.Spacing();
-                                        DrawSelector(name, cond.Id, rule.Worlds, rule.Not.Worlds);
-                                    }
-                                }
-
-                                // 接着显示其他国际大区
-                                var sortedDC = ExcelWorldHelper.GetDataCenters(Enum.GetValues<ExcelWorldHelper.Region>()).ToList();
-                                foreach (var dc in sortedDC)
-                                {
-                                    var worlds = ExcelWorldHelper.GetPublicWorlds().Where(x => x.DataCenter.RowId == dc.RowId);
-                                    ImGuiEx.Text($"{dc.Name}");
-                                    foreach(var cond in worlds)
-                                    {
-                                        var name = cond.Name.ToString();
-                                        if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                        if(OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.RowId)) continue;
-                                        ImGuiEx.Spacing();
-                                        DrawSelector(name, cond.RowId, rule.Worlds, rule.Not.Worlds);
-                                    }
-                                }
-
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_Gearset)
-                        {
-                            if(EzThrottler.Throttle("UpdateGS", 5000)) Utils.UpdateGearsetCache();
-                            ImGui.TableNextColumn();
-                            //Gearset
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            var gch = Profile.Characters.FirstOrDefault();
-                            if(ImGui.BeginCombo("##gs", rule.Gearsets.ToGearsetNames(gch).PrintRange(rule.Not.Gearsets.ToGearsetNames(gch), out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                if(!C.GearsetNameCacheCID.TryGetValue(gch, out var gearsets)) gearsets = [];
-                                foreach(var cond in gearsets)
-                                {
-                                    var name = cond.ToString();
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.Gearsets.Contains(cond.Id)) continue;
-                                    if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)((Job)cond.ClassJob).GetIcon(), false, out var texture))
-                                    {
-                                        ImGui.Image(texture.ImGuiHandle, iconSize);
-                                        ImGui.SameLine();
-                                    }
-                                    DrawSelector(name, cond.Id, rule.Gearsets, rule.Not.Gearsets);
-                                }
-                                foreach(var z in rule.Gearsets)
-                                {
-                                    if(!gearsets.Any(h => h.Id == z))
-                                    {
-                                        ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                                        ImGuiEx.CollectionCheckbox($"{z}", z, rule.Gearsets, delayedOperation: true);
-                                        ImGui.PopStyleColor();
-                                    }
-                                }
-                                ImGui.EndCombo();
-                            }
-
-                            if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        if(C.Cond_Players)
-                        {
-                            ImGui.TableNextColumn();
-
-                            // Player Selection Dropdown
-                            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                            if(ImGui.BeginCombo("##players", rule.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}").PrintRange(rule.Not.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
-                            {
-                                FiltersSelection();
-
-                                foreach(var player in C.selectedPlayers)
-                                {
-                                    var name = player.Name;
-
-                                    // Apply filtering
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase))
-                                        continue;
-                                    if(OnlySelected[filterCnt] && !rule.Players.Contains(name))
-                                        continue;
-
-                                    DrawSelector($"{name}##{player.Name}", player.Name, rule.Players, rule.Not.Players);
-                                }
-
-                                // Handle players that no longer exist in `C.selectedPlayers` but are still in `rule.Players`
-                                foreach(var z in rule.Players)
-                                {
-                                    if(!C.selectedPlayers.Any(p => p.Name == z))
-                                    {
-                                        ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                                        ImGuiEx.CollectionCheckbox($"{z}", z, rule.Players, delayedOperation: true);
-                                        ImGui.PopStyleColor();
-                                    }
-                                }
-
-                                ImGui.EndCombo();
-                            }
-
-                            if(fullList != null)
-                                ImGuiEx.Tooltip(UI.AnyNotice + fullList);
-                        }
-                        filterCnt++;
-
-                        ImGui.TableNextColumn();
-
-                        {
-                            //Glamour
-                            ImGuiEx.SetNextItemFullWidth();
-                            if(ImGui.BeginCombo("##glamour", rule.SelectedPresets.PrintRange(out var fullList, "- 未选择 -"), C.ComboSize))
-                            {
-                                FiltersSelection();
-                                var designs = Profile.GetPresetsUnion().OrderBy(x => x.Name);
-                                foreach(var x in designs)
-                                {
-                                    var name = x.Name;
-                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                    if(OnlySelected[filterCnt] && !rule.SelectedPresets.Contains(name)) continue;
-                                    if(x.GetFolder(Profile)?.HiddenFromSelection == true) continue;
-                                    if(ImGuiEx.CollectionCheckbox($"{x.CensoredName}##{x.GUID}", x.Name, rule.SelectedPresets))
-                                    {
-                                        rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
-                                    }
-                                }
-                                foreach(var x in rule.SelectedPresets)
-                                {
-                                    if(designs.Any(d => d.Name == x && d.GetFolder(Profile)?.HiddenFromSelection != true)) continue;
-                                    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                                    if(ImGuiEx.CollectionCheckbox($"{x}", x, rule.SelectedPresets, false, true))
-                                    {
-                                        rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
-                                    }
-                                    ImGui.PopStyleColor();
-                                }
-                                ImGui.EndCombo();
-                            }
-                            if(fullList != null) ImGuiEx.Tooltip(UI.RandomNotice + fullList);
-                            filterCnt++;
-                        }
-
-                        ImGui.TableNextColumn();
-                        //Delete
-                        if(ImGuiEx.IconButton(FontAwesomeIcon.Copy))
-                        {
-                            Safe(() => Clipboard.SetText(JsonConvert.SerializeObject(rule)));
-                        }
-                        if(C.StickyPresets && C.Sticky)
-                        {
-                            ImGui.SameLine();
-                            if(ImGuiEx.IconButton(FontAwesomeIcon.Dice))
-                            {
-                                if(rule.SelectedPresets.Count > 1)
-                                {
-                                    var old = rule.StickyRandom;
-                                    rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
-                                    P.ForceUpdate = true;
-                                    if(rule.StickyRandom == old)
-                                    {
-                                        rule.StickyRandom = (rule.StickyRandom + 1) % rule.SelectedPresets.Count;
-                                    }
-                                    ;
-                                }
-                                else { rule.StickyRandom = 0; }
-                            }
-                            ImGuiEx.Tooltip($"Randomize Preset Used.");
-                        }
-                        ImGui.SameLine();
-                        if(ImGuiEx.IconButton(FontAwesomeIcon.Trash) && ImGui.GetIO().KeyCtrl)
-                        {
-                            new TickScheduler(() => Profile.Rules.RemoveAll(x => x.GUID == rule.GUID));
-                        }
-                        ImGuiEx.Tooltip("按住CTRL+点击来删除");
-
-                        if(col) ImGui.PopStyleColor();
-                        if(col2) ImGui.PopStyleColor();
-                        ImGui.PopID();
-                    }
-
-                    ImGui.EndTable();
-                    foreach(var x in MoveCommands)
-                    {
-                        ImGui.SetCursorPos(x.ButtonPos);
-                        x.BeginDraw();
-                        x.AcceptDraw();
-                        ImGui.SetCursorPos(x.RowPos);
-                        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, ImGuiHelpers.GetButtonSize(" ").Y));
-                        x.AcceptDraw();
                     }
                 }
-                ImGui.PopStyleVar();
-            }
-            else
-            {
-                UI.ProfileSelectorCommon();
-            }
-        }
+                ImGuiEx.Tooltip($"Paste previously copied rule or folder from clipboard");
+                ImGui.SameLine();
 
-private static IEnumerable<(uint Id, string Name, string DataCenter)> GetChineseWorlds()
-    {
-        // 土法定义中国大区的服务器
-        var servers = new Dictionary<string, (uint Id, string Name)[]>
-        {
-            ["陆行鸟"] =
-            [
-            (1175u, "晨曦王座"),
-            (1174u, "沃仙曦染"),
-            (1173u, "宇宙和音"),
-            (1167u, "红玉海"),
-            (1060u, "萌芽池"),
-            (1081u, "神意之地"),
-            (1044u, "幻影群岛"),
-            (1042u, "拉诺西亚"),
-        ],
-            ["莫古力"] =
-            [
-            (1121u, "拂晓之间"),
-            (1166u, "龙巢神殿"),
-            (1113u, "旅人栈桥"),
-            (1076u, "白金幻象"),
-            (1176u, "梦羽宝境"),
-            (1171u, "神拳痕"),
-            (1170u, "潮风亭"),
-            (1172u, "白银乡"),
-        ],
-            ["猫小胖"] =
-            [
-            (1179u, "琥珀原"),
-            (1178u, "柔风海湾"),
-            (1177u, "海猫茶屋"),
-            (1169u, "延夏"),
-            (1106u, "静语庄园"),
-            (1045u, "摩杜纳"),
-            (1043u, "紫水栈桥"),
-        ],
-            ["豆豆柴"] =
-            [
-            (1201u, "红茶川"),
-            (1186u, "伊修加德"),
-            (1180u, "太阳海岸"),
-            (1183u, "银泪湖"),
-            (1192u, "水晶塔"),
-            (1202u, "萨雷安"),
-            (1203u, "加雷马"),
-            (1200u, "亚马乌罗提"),
-        ]
-        };
+                if(ImGuiEx.IconButton(FontAwesomeIcon.FolderPlus))
+                {
+                    currentProfile.RulesFolders.Add(new() { Name = $"规则组 {currentProfile.RulesFolders.Count + 1}" });
+                }
+                ImGuiEx.Tooltip("添加新规则组");
 
-        // 合并所有服务器并返回
-        return servers.SelectMany(dc => dc.Value.Select(w => (w.Id, w.Name, dc.Key)));
-    }
-
-        private static void DrawPlaceName(TerritoryType t, Vector4? nullable, string arg2)
-        {
-            var cond = t.FindBiome();
-            if(cond != Biome.No_biome && ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "biome", $"{(int)cond}.png"), out var texture))
-            {
-                ImGui.Image(texture.ImGuiHandle, iconSize);
+                if(currentProfile.IsStaticExists())
+                {
+                    ImGuiEx.HelpMarker($"预设 {currentProfile.GetStaticPreset()?.CensoredName} 被选为静态。自动执行已禁用。", GradientColor.Get(EColor.RedBright, EColor.YellowBright, 1000), FontAwesomeIcon.ExclamationTriangle.ToIconString());
+                }
                 ImGui.SameLine();
             }
-            ImGuiEx.Text(nullable, arg2);
-        }
-
-        private static void DrawSelector<T>(string name, T value, ICollection<T> values, ICollection<T> notValues) => DrawSelector(name, [value], values, notValues);
-
-        private static void DrawSelector<T>(string name, IEnumerable<T> value, ICollection<T> values, ICollection<T> notValues)
-        {
-            var buttonSize = ImGuiHelpers.GetButtonSize(" ");
-            var size = new Vector2(buttonSize.Y);
-            sbyte s = 0;
-            if(values.ContainsAny(value)) s = 1;
-            if(notValues.ContainsAny(value)) s = -1;
-
-            var checkbox = new TristateCheckboxEx();
-
-            if(checkbox.Draw(name, s, out s))
+            void ButtonsRight()
             {
-                if(!C.AllowNegativeConditions && s == -1)
+                UI.ForceUpdateButton();
+                ImGui.SameLine();
+            }
+
+            UI.ProfileSelectorCommon(ButtonsLeft, ButtonsRight);
+
+            string newOpen = null;
+
+            if(!Focus || Open == "" || Open == null)
+            {
+                if(ImGuiEx.TreeNode($"主规则##globalrules", ImGuiTreeNodeFlags.DefaultOpen))
                 {
-                    s = 0;
-                }
-                if(s == 1)
-                {
-                    foreach(var v in value)
+                    CollapsingHeaderClicked(currentProfile, -1, null);
+                    newOpen = "";
+                    if(DragDrop.AcceptPayload(out var result, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect))
                     {
-                        notValues.Remove(v);
-                        values.Add(v);
+                        DragDropUtils.AcceptFolderDragDrop(currentProfile, result, currentProfile.Rules);
                     }
-                }
-                else if(s == 0)
-                {
-                    foreach(var v in value)
-                    {
-                        notValues.Remove(v);
-                        values.Remove(v);
-                    }
+                    DrawRuleFolder(currentProfile, currentProfile.Rules, out var postAction, "");
+                    ImGui.TreePop();
+                    postAction?.Invoke();
                 }
                 else
                 {
-                    foreach(var v in value)
+                    CollapsingHeaderClicked(currentProfile, -1, null);
+                    if(DragDrop.AcceptPayload(out var result, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect))
                     {
-                        notValues.Add(v);
-                        values.Remove(v);
+                        DragDropUtils.AcceptFolderDragDrop(currentProfile, result, currentProfile.Rules);
                     }
                 }
             }
-            if(s == -1)
+
+            for(var ruleFolderIndex = 0; ruleFolderIndex < currentProfile.RulesFolders.Count; ruleFolderIndex++)
             {
-                ImGuiEx.Tooltip($"如果匹配到任何被打×的条件，规则不会被应用。");
+                var rulesFolder = currentProfile.RulesFolders[ruleFolderIndex];
+                if(Focus && Open != rulesFolder.GUID && Open != null) continue;
+                if(!rulesFolder.Enabled)
+                {
+                    ImGuiEx.RightFloat($"已禁用{rulesFolder.GUID}", () => ImGuiEx.Text(ImGuiColors.DalamudRed, "已禁用"));
+                }
+                if(ImGuiEx.TreeNode($"{rulesFolder.Name}###rulefolder{rulesFolder.GUID}"))
+                {
+                    newOpen = rulesFolder.GUID;
+                    CollapsingHeaderClicked(currentProfile, ruleFolderIndex, rulesFolder);
+                    if(DragDrop.AcceptPayload(out var result, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect))
+                    {
+                        DragDropUtils.AcceptFolderDragDrop(currentProfile, result, rulesFolder.Rules);
+                    }
+                    DrawRuleFolder(currentProfile, rulesFolder.Rules, out var postAction, rulesFolder.GUID);
+                    ImGui.TreePop();
+                    postAction?.Invoke();
+                }
+                else
+                {
+                    CollapsingHeaderClicked(currentProfile, ruleFolderIndex, rulesFolder);
+                    if(DragDrop.AcceptPayload(out var result, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect))
+                    {
+                        DragDropUtils.AcceptFolderDragDrop(currentProfile, result, rulesFolder.Rules);
+                    }
+                }
+            }
+            Open = newOpen;
+
+        }
+        else
+        {
+            UI.ProfileSelectorCommon();
+        }
+    }
+
+    private static void CollapsingHeaderClicked(Profile profile, int ruleFolderIndex, ApplyRuleFolder ruleFolder)
+    {
+        if(ImGui.IsItemHovered() && ImGui.IsItemClicked(ImGuiMouseButton.Right)) ImGui.OpenPopup($"组 {ruleFolder?.GUID}");
+        if(ImGui.BeginPopup($"组 {ruleFolder?.GUID}"))
+        {
+            if(ruleFolder != null)
+            {
+                ImGuiEx.SetNextItemWidthScaled(150f);
+                ImGui.InputTextWithHint("##name", "文件夹名称", ref ruleFolder.Name, 200);
+                if(ImGui.Selectable("导出到剪贴板"))
+                {
+                    Copy(EzConfig.DefaultSerializationFactory.Serialize(ruleFolder, false));
+                }
+                if(ruleFolder.Enabled)
+                {
+                    if(ImGui.Selectable("禁用")) ruleFolder.Enabled = false;
+                }
+                else
+                {
+                    if(ImGui.Selectable("启用")) ruleFolder.Enabled = true;
+                }
+                if(ImGui.Selectable("上移", false, ImGuiSelectableFlags.DontClosePopups) && ruleFolderIndex > 0)
+                {
+                    (profile.RulesFolders[ruleFolderIndex], profile.RulesFolders[ruleFolderIndex - 1]) = (profile.RulesFolders[ruleFolderIndex - 1], profile.RulesFolders[ruleFolderIndex]);
+                }
+                if(ImGui.Selectable("下移", false, ImGuiSelectableFlags.DontClosePopups) && ruleFolderIndex < profile.RulesFolders.Count - 1)
+                {
+                    (profile.RulesFolders[ruleFolderIndex], profile.RulesFolders[ruleFolderIndex + 1]) = (profile.RulesFolders[ruleFolderIndex + 1], profile.RulesFolders[ruleFolderIndex]);
+                }
+                ImGui.Separator();
+
+                if(ImGui.BeginMenu("删除组..."))
+                {
+                    if(ImGui.Selectable("...并将规则移动到默认组 (按住 CTRL)"))
+                    {
+                        if(ImGuiEx.Ctrl)
+                        {
+                            new TickScheduler(() =>
+                            {
+                                foreach(var x in ruleFolder.Rules)
+                                {
+                                    profile.Rules.Add(x);
+                                }
+                                profile.RulesFolders.Remove(ruleFolder);
+                            });
+                        }
+                    }
+                    if(ImGui.Selectable("...并删除包含的规则 (按住 CTRL+SHIFT)"))
+                    {
+                        if(ImGuiEx.Ctrl && ImGuiEx.Shift)
+                        {
+                            new TickScheduler(() => profile.RulesFolders.Remove(ruleFolder));
+                        }
+                    }
+                    ImGui.EndMenu();
+                }
+            }
+            else
+            {
+                if(ImGui.Selectable("导出到剪贴板"))
+                {
+                    Copy(EzConfig.DefaultSerializationFactory.Serialize(new ApplyRuleFolder() { Name = "导出默认组", Rules = profile.Rules }, false));
+                }
+            }
+
+            ImGui.EndPopup();
+        }
+        else
+        {
+            if(!ImGui.IsMouseDragging(ImGuiMouseButton.Left))
+            {
+                ImGuiEx.Tooltip("右键单击以打开上下文菜单");
             }
         }
-        private static List<TimelineSegment> RenderTimeline(List<TimelineSegment> precise_Times)
+    }
+
+    static void DrawRuleFolder(Profile currentProfile, List<ApplyRule> rulesList, out Action postAction, string extraID)
+    {
+        postAction = null;
+        var active = (bool[])[
+                C.Cond_State,
+                C.Cond_Biome,
+                C.Cond_Emote,
+                C.Cond_Gearset,
+                C.Cond_House,
+                C.Cond_Job,
+                C.Cond_Time,
+                C.Cond_Weather,
+                C.Cond_World,
+                C.Cond_Zone,
+                C.Cond_ZoneGroup,
+                C.Cond_Players,
+            ];
+
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
+        DragDrop.Begin();
+        if(ImGui.BeginTable($"##rules{extraID}", 3 + active.Count(x => x), ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable | ImGuiTableFlags.Reorderable))
         {
+            ImGui.TableSetupColumn("  ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
+            if(C.Cond_State) ImGui.TableSetupColumn("状态");
+            if(C.Cond_Biome) ImGui.TableSetupColumn("生物群系");
+            if(C.Cond_Weather) ImGui.TableSetupColumn("天气");
+            if(C.Cond_Time) ImGui.TableSetupColumn("时间");
+            if(C.Cond_ZoneGroup) ImGui.TableSetupColumn("区域组");
+            if(C.Cond_Zone) ImGui.TableSetupColumn("区域");
+            if(C.Cond_House) ImGui.TableSetupColumn("住宅");
+            if(C.Cond_Emote) ImGui.TableSetupColumn("情感动作");
+            if(C.Cond_Job) ImGui.TableSetupColumn("职业");
+            if(C.Cond_World) ImGui.TableSetupColumn("世界");
+            if(C.Cond_Gearset) ImGui.TableSetupColumn("套装");
+            if(C.Cond_Players) ImGui.TableSetupColumn("玩家");
+            ImGui.TableSetupColumn("预设");
+            ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableHeadersRow();
 
-            var cursorPos = ImGui.GetCursorScreenPos();
-            var drawList = ImGui.GetWindowDrawList();
-            var startX = cursorPos.X + ImGui.CalcTextSize("12:00 AM").X / 2;
-            var endX = startX + ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("12:00 AM").X;
-            var timelineWidth = endX - startX;
-            var centerY = cursorPos.Y + 20;
-            float height = 0;
-
-            var timePoints = GetPoints(precise_Times);
-            var segmentStates = GetStates(precise_Times);
-
-            // Hover tooltip
-            var mousePos = ImGui.GetMousePos();
-            var hoveringTimeline = mousePos.Y > centerY - 5 && mousePos.Y < centerY + 5 && mousePos.X >= startX && mousePos.X <= endX;
-            var hoverTime = (float)(Math.Round((mousePos.X - startX) / timelineWidth * 24 * 60 / 5.0) * 5) / (24 * 60);
-            timePoints = timePoints.Distinct().OrderBy(x => x).ToList();
-            for(var i = 0; i < timePoints.Count - 1; i++)
+            for(var i = 0; i < rulesList.Count; i++)
             {
-                var x1 = startX + timePoints[i] * timelineWidth;
-                var x2 = startX + timePoints[i + 1] * timelineWidth;
+                var filterCnt = 0;
+                void FiltersSelection()
+                {
+                    ImGui.SetWindowFontScale(0.8f);
+                    ImGuiEx.SetNextItemFullWidth();
+                    ImGui.InputTextWithHint($"##fltr{filterCnt}", "筛选...", ref Filters[filterCnt], 50);
+                    ImGui.Checkbox($"仅选中##{filterCnt}", ref OnlySelected[filterCnt]);
+                    ImGui.SetWindowFontScale(1f);
+                    ImGui.Separator();
+                }
+                var rule = rulesList[i];
+                var col = !rule.Enabled;
+                var col2 = P.LastRule.Any(x => x.GUID == rule.GUID);
+                if(col2) ImGui.PushStyleColor(ImGuiCol.Text, EColor.Green);
+                if(col) ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey3);
+                ImGui.PushID(rule.GUID);
+                ImGui.TableNextRow();
+                DragDrop.SetRowColor(rule.GUID);
+                if(CurrentDrag == rule.GUID)
+                {
+                    var color = GradientColor.Get(EColor.Green, EColor.Green with { W = EColor.Green.W / 4 }, 500).ToUint();
+                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, color);
+                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, color);
+                }
+                ImGui.TableNextColumn();
+                DragDrop.NextRow();
 
-                var segmentState = precise_Times[i].State;
-                var color = segmentState switch
+                //Sorting
+                var rowPos = ImGui.GetCursorPos();
+                ImGui.Checkbox("##enable", ref rule.Enabled);
+                ImGuiEx.Tooltip("启用此规则");
+
+                var moveIndex = i;
+
+                ImGui.SameLine();
+                DragDrop.DrawButtonDummy(rule.GUID, (payload) =>
+                {
+                    DragDropUtils.AcceptProfileDragDrop(currentProfile, payload, rulesList, moveIndex);
+                });
+
+                ImGui.SameLine();
+                ImGui.PushFont(UiBuilder.IconFont);
+                ImGuiEx.ButtonCheckbox("\uf103", ref rule.Passthrough);
+                ImGui.PopFont();
+                ImGuiEx.Tooltip("启用此规则的穿透模式。DynamicBridge在匹配到此规则后将继续搜索，所有符合条件的规则都将被依次顺序应用。");
+
+
+                if(C.Cond_State)
+                {
+                    ImGui.TableNextColumn();
+                    //Conditions
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##conditions", rule.States.PrintRange(rule.Not.States, out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in Enum.GetValues<CharacterState>())
+                        {
+                            var name = cond.ToString().Replace("_", " ");
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.States.Contains(cond)) continue;
+                            if(ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "state", $"{(int)cond}.png"), out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector(name, cond, rule.States, rule.Not.States);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Biome)
+                {
+                    ImGui.TableNextColumn();
+                    //Biome
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##biome", rule.Biomes.PrintRange(rule.Not.Biomes, out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in Enum.GetValues<Biome>())
+                        {
+                            if(cond == Biome.No_biome) continue;
+                            var name = cond.ToString().Replace("_", " ");
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Biomes.Contains(cond)) continue;
+                            if(ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "biome", $"{(int)cond}.png"), out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector(name, cond, rule.Biomes, rule.Not.Biomes);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Weather)
+                {
+                    ImGui.TableNextColumn();
+                    //Weather
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##weather", rule.Weathers.Select(x => P.WeatherManager.Weathers[x]).ToHashSet().PrintRange(rule.Not.Weathers.Select(x => P.WeatherManager.Weathers[x]).ToHashSet(), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in P.WeatherManager.WeatherNames)
+                        {
+                            var name = cond.Key;
+                            if(name.IsNullOrEmpty()) continue;
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Weathers.ContainsAny(cond.Value)) continue;
+                            if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)Svc.Data.GetExcelSheet<Weather>().GetRow(cond.Value.First()).Icon, false, out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector($"{cond.Key}##{cond.Value.First()}", P.WeatherManager.WeatherNames[cond.Key], rule.Weathers, rule.Not.Weathers);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Time && !C.Cond_Time_Precise)
+                {
+                    ImGui.TableNextColumn();
+                    //Time
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##Time", rule.Times.PrintRange(rule.Not.Times, out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in Enum.GetValues<ETime>())
+                        {
+                            var name = cond.ToString().Replace("_", " ");
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Times.Contains(cond)) continue;
+                            DrawSelector(name, cond, rule.Times, rule.Not.Times);
+                            ImGuiEx.Tooltip($"{ETimeChecker.Names[cond]}");
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                else if(C.Cond_Time && C.Cond_Time_Precise)
+                {
+                    ImGui.TableNextColumn();
+                    if(!showDayNightCycleDict.ContainsKey(i))
+                    {
+                        showDayNightCycleDict[i] = false;
+                    }
+                    //Precise Time
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(!showDayNightCycleDict[i] && ImGui.Button($"打开时间编辑器##{i}"))
+                    {
+                        showDayNightCycleDict[i] = true;
+                    }
+                    else if(showDayNightCycleDict[i] && ImGui.Button($"关闭时间编辑器##{i}"))
+                    {
+                        showDayNightCycleDict[i] = false;
+                    }
+                    var windowPos = ImGui.GetCursorScreenPos();
+                    if(showDayNightCycleDict[i])
+                    {
+                        ImGui.SetNextWindowPos(windowPos);
+                        // ImGui.SetNextWindowSize(new Vector2(400, 80), ImGuiCond.Always);
+                        var open = showDayNightCycleDict[i];
+                        ImGui.Begin($"时间编辑器##{i}", ref open, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar);
+
+                        rule.Precise_Times = RenderTimeline(rule.Precise_Times);
+                        if(!ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows) && ImGui.IsAnyMouseDown())
+                        {
+                            showDayNightCycleDict[i] = false;
+                        }
+
+                        ImGui.End();
+                    }
+                }
+                filterCnt++;
+
+                if(C.Cond_ZoneGroup)
+                {
+                    ImGui.TableNextColumn();
+                    //Zone groups
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##zgroup", rule.SpecialTerritories.Select(x => SpecialTerritoryChecker.Renames.TryGetValue(x, out var s) ? s : x.ToString().Replace("_", " ")).PrintRange(rule.Not.SpecialTerritories.Select(x => SpecialTerritoryChecker.Renames.TryGetValue(x, out var s) ? s : x.ToString().Replace("_", " ")), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in Enum.GetValues<SpecialTerritory>())
+                        {
+                            var name = SpecialTerritoryChecker.Renames.TryGetValue(cond, out var s) ? s : cond.ToString().Replace("_", " ");
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.SpecialTerritories.Contains(cond)) continue;
+                            if(ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "zgrp", $"{(int)cond}.png"), out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector(name, cond, rule.SpecialTerritories, rule.Not.SpecialTerritories);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Zone)
+                {
+                    ImGui.TableNextColumn();
+                    //Zone
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##zone", rule.Territories.Select(x => ExcelTerritoryHelper.GetName(x)).PrintRange(rule.Not.Territories.Select(x => ExcelTerritoryHelper.GetName(x)), out var fullList), C.ComboSize))
+                    {
+                        if(C.AllowNegativeConditions)
+                        {
+                            if(ImGui.Selectable("打开允许列表编辑器"))
+                            {
+                                new TerritorySelector(rule.Territories, (terr, s) =>
+                                {
+                                    rule.Territories = [.. s];
+                                    rule.Not.Territories.RemoveAll(x => rule.Territories.Contains(x));
+                                })
+                                {
+                                    ActionDrawPlaceName = DrawPlaceName,
+                                    WindowName = $"选择允许列表区域"
+                                };
+                            }
+                            if(ImGui.Selectable("打开拒绝列表编辑器"))
+                            {
+                                new TerritorySelector(rule.Territories, (terr, s) =>
+                                {
+                                    rule.Not.Territories = [.. s];
+                                    rule.Territories.RemoveAll(x => rule.Not.Territories.Contains(x));
+                                })
+                                {
+                                    ActionDrawPlaceName = DrawPlaceName,
+                                    WindowName = $"选择拒绝列表区域"
+                                };
+                            }
+                        }
+                        else
+                        {
+                            new TerritorySelector(rule.Territories, (terr, s) => rule.Territories = [.. s])
+                            {
+                                ActionDrawPlaceName = DrawPlaceName
+                            };
+                            ImGui.CloseCurrentPopup();
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+
+                if(C.Cond_House)
+                {
+                    ImGui.TableNextColumn();
+                    //House
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##house", rule.Houses.Select(x => C.Houses.FirstOrDefault(h => h.ID == x)?.Name ?? $"{x:X16}").PrintRange(rule.Not.Houses.Select(x => C.Houses.FirstOrDefault(h => h.ID == x)?.Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var z in C.Houses)
+                        {
+                            var name = z.Name;
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Houses.Contains(z.ID)) continue;
+                            DrawSelector(name + $"##{z.GUID}", z.ID, rule.Houses, rule.Not.Houses);
+                        }
+                        foreach(var z in rule.Houses)
+                        {
+                            if(!C.Houses.Any(h => h.ID == z))
+                            {
+                                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                                ImGuiEx.CollectionCheckbox($"{z}", z, rule.Houses, delayedOperation: true);
+                                ImGui.PopStyleColor();
+                            }
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Emote)
+                {
+                    ImGui.TableNextColumn();
+                    //Emote
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##emote", rule.Emotes.Select(x => Svc.Data.GetExcelSheet<Emote>().GetRow(x).Name.ExtractText()).PrintRange(rule.Not.Emotes.Select(x => Svc.Data.GetExcelSheet<Emote>().GetRow(x).Name.ExtractText()), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+
+                        if(Player.Available && Utils.GetAdjustedEmote() != 0)
+                        {
+                            var id = Utils.GetAdjustedEmote();
+                            var cond = Svc.Data.GetExcelSheet<Emote>().GetRow(id);
+                            if(ThreadLoadImageHandler.TryGetIconTextureWrap(cond.Icon, false, out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            ImGui.PushStyleColor(ImGuiCol.Text, EColor.CyanBright);
+                            DrawSelector($"当前: {id}/{cond.Name.ExtractText()}##{cond.RowId}", cond.RowId, rule.Emotes, rule.Not.Emotes);
+                            ImGui.PopStyleColor();
+                            ImGui.Separator();
+                        }
+
+                        foreach(var cond in Svc.Data.GetExcelSheet<Emote>().Where(e => e.Name.ExtractText().IsNullOrEmpty() == false || e.Icon != 0 || rule.Emotes.Contains(e.RowId)))
+                        {
+                            var name = cond.Name.ExtractText() ?? "";
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Emotes.Contains(cond.RowId)) continue;
+                            if(ThreadLoadImageHandler.TryGetIconTextureWrap(cond.Icon, false, out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector($"{name.NullWhenEmpty() ?? $"Unnamed/{cond.RowId}"}##{cond.RowId}", cond.RowId, rule.Emotes, rule.Not.Emotes);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Job)
+                {
+                    ImGui.TableNextColumn();
+                    //Job
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##job", rule.Jobs.PrintRange(rule.Not.Jobs, out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in Enum.GetValues<Job>().OrderByDescending(x => Svc.Data.GetExcelSheet<ClassJob>().GetRow((uint)x).Role))
+                        {
+                            if(cond == Job.ADV) continue;
+                            if(cond.IsUpgradeable() && C.UnifyJobs) continue;
+                            var name = cond.ToString().Replace("_", " ");
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Jobs.Contains(cond)) continue;
+                            if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)cond.GetIcon(), false, out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            if(cond.IsUpgradeable()) ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey3);
+                            DrawSelector(name, cond, rule.Jobs, rule.Not.Jobs);
+                            if(cond.IsUpgradeable()) ImGui.PopStyleColor();
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_World)
+                {
+                    ImGui.TableNextColumn();
+                    //World
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##world", rule.Worlds.ToWorldNames().PrintRange(rule.Not.Worlds.ToWorldNames(), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var dc in ExcelWorldHelper.GetDataCenters(Enum.GetValues<ExcelWorldHelper.Region>()))
+                        {
+                            var worlds = ExcelWorldHelper.GetPublicWorlds().Where(x => x.DataCenter.RowId == dc.RowId);
+                            ImGuiEx.Text($"{dc.Name}");
+                            foreach(var cond in worlds)
+                            {
+                                var name = cond.Name.ToString();
+                                if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                                if(OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.RowId)) continue;
+                                ImGuiEx.Spacing();
+                                DrawSelector(name, cond.RowId, rule.Worlds, rule.Not.Worlds);
+                            }
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Gearset)
+                {
+                    if(EzThrottler.Throttle("UpdateGS", 5000)) Utils.UpdateGearsetCache();
+                    ImGui.TableNextColumn();
+                    //Gearset
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    var gch = currentProfile.Characters.FirstOrDefault();
+                    if(ImGui.BeginCombo("##gs", rule.Gearsets.ToGearsetNames(gch).PrintRange(rule.Not.Gearsets.ToGearsetNames(gch), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        if(!C.GearsetNameCacheCID.TryGetValue(gch, out var gearsets)) gearsets = [];
+                        foreach(var cond in gearsets)
+                        {
+                            var name = cond.ToString();
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Gearsets.Contains(cond.Id)) continue;
+                            if(ThreadLoadImageHandler.TryGetIconTextureWrap((uint)((Job)cond.ClassJob).GetIcon(), false, out var texture))
+                            {
+                                ImGui.Image(texture.ImGuiHandle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector(name, cond.Id, rule.Gearsets, rule.Not.Gearsets);
+                        }
+                        foreach(var z in rule.Gearsets)
+                        {
+                            if(!gearsets.Any(h => h.Id == z))
+                            {
+                                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                                ImGuiEx.CollectionCheckbox($"{z}", z, rule.Gearsets, delayedOperation: true);
+                                ImGui.PopStyleColor();
+                            }
+                        }
+                        ImGui.EndCombo();
+                    }
+
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                if(C.Cond_Players)
+                {
+                    ImGui.TableNextColumn();
+
+                    // Player Selection Dropdown
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##players", rule.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}").PrintRange(rule.Not.Players.Select(x => C.selectedPlayers.FirstOrDefault(p => x == p.Name).Name ?? $"{x:X16}"), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+
+                        foreach(var player in C.selectedPlayers)
+                        {
+                            var name = player.Name;
+
+                            // Apply filtering
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            if(OnlySelected[filterCnt] && !rule.Players.Contains(name))
+                                continue;
+
+                            DrawSelector($"{name}##{player.Name}", player.Name, rule.Players, rule.Not.Players);
+                        }
+
+                        // Handle players that no longer exist in `C.selectedPlayers` but are still in `rule.Players`
+                        foreach(var z in rule.Players)
+                        {
+                            if(!C.selectedPlayers.Any(p => p.Name == z))
+                            {
+                                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                                ImGuiEx.CollectionCheckbox($"{z}", z, rule.Players, delayedOperation: true);
+                                ImGui.PopStyleColor();
+                            }
+                        }
+
+                        ImGui.EndCombo();
+                    }
+
+                    if(fullList != null)
+                        ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
+                ImGui.TableNextColumn();
+
+                {
+                    //Glamour
+                    ImGuiEx.SetNextItemFullWidth();
+                    if(ImGui.BeginCombo("##glamour", rule.SelectedPresets.PrintRange(out var fullList, "- None -"), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        var designs = currentProfile.GetPresetsUnion().OrderBy(x => x.Name);
+                        foreach(var x in designs)
+                        {
+                            var name = x.Name;
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.SelectedPresets.Contains(name)) continue;
+                            if(x.GetFolder(currentProfile)?.HiddenFromSelection == true) continue;
+                            if(ImGuiEx.CollectionCheckbox($"{x.CensoredName}##{x.GUID}", x.Name, rule.SelectedPresets))
+                            {
+                                rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
+                            }
+                        }
+                        foreach(var x in rule.SelectedPresets)
+                        {
+                            if(designs.Any(d => d.Name == x && d.GetFolder(currentProfile)?.HiddenFromSelection != true)) continue;
+                            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                            if(ImGuiEx.CollectionCheckbox($"{x}", x, rule.SelectedPresets, false, true))
+                            {
+                                rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
+                            }
+                            ImGui.PopStyleColor();
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.RandomNotice + fullList);
+                    filterCnt++;
+                }
+
+                ImGui.TableNextColumn();
+                //Delete
+                if(ImGuiEx.IconButton(FontAwesomeIcon.Copy))
+                {
+                    Safe(() => Clipboard.SetText(JsonConvert.SerializeObject(rule)));
+                }
+                if(C.StickyPresets && C.Sticky)
+                {
+                    ImGui.SameLine();
+                    if(ImGuiEx.IconButton(FontAwesomeIcon.Dice))
+                    {
+                        if(rule.SelectedPresets.Count > 1)
+                        {
+                            var old = rule.StickyRandom;
+                            rule.StickyRandom = Random.Shared.Next(0, rule.SelectedPresets.Count);
+                            P.ForceUpdate = true;
+                            if(rule.StickyRandom == old)
+                            {
+                                rule.StickyRandom = (rule.StickyRandom + 1) % rule.SelectedPresets.Count;
+                            }
+                            ;
+                        }
+                        else { rule.StickyRandom = 0; }
+                    }
+                    ImGuiEx.Tooltip($"随机选择使用的预设。");
+                }
+                ImGui.SameLine();
+                if(ImGuiEx.IconButton(FontAwesomeIcon.Trash) && ImGui.GetIO().KeyCtrl)
+                {
+                    new TickScheduler(() => rulesList.Remove(rule));
+                }
+                ImGuiEx.Tooltip("按住 CTRL+单击以删除");
+
+                if(col) ImGui.PopStyleColor();
+                if(col2) ImGui.PopStyleColor();
+                ImGui.PopID();
+            }
+
+            ImGui.EndTable();
+            postAction = () => DragDrop.End();
+        }
+        ImGui.PopStyleVar();
+    }
+
+    private static void DrawPlaceName(TerritoryType t, Vector4? nullable, string arg2)
+    {
+        var cond = t.FindBiome();
+        if(cond != Biome.No_biome && ThreadLoadImageHandler.TryGetTextureWrap(Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName, "res", "biome", $"{(int)cond}.png"), out var texture))
+        {
+            ImGui.Image(texture.ImGuiHandle, iconSize);
+            ImGui.SameLine();
+        }
+        ImGuiEx.Text(nullable, arg2);
+    }
+
+    private static void DrawSelector<T>(string name, T value, ICollection<T> values, ICollection<T> notValues) => DrawSelector(name, [value], values, notValues);
+
+    private static void DrawSelector<T>(string name, IEnumerable<T> value, ICollection<T> values, ICollection<T> notValues)
+    {
+        var buttonSize = ImGuiHelpers.GetButtonSize(" ");
+        var size = new Vector2(buttonSize.Y);
+        sbyte s = 0;
+        if(values.ContainsAny(value)) s = 1;
+        if(notValues.ContainsAny(value)) s = -1;
+
+        var checkbox = new TristateCheckboxEx();
+
+        if(checkbox.Draw(name, s, out s))
+        {
+            if(!C.AllowNegativeConditions && s == -1)
+            {
+                s = 0;
+            }
+            if(s == 1)
+            {
+                foreach(var v in value)
+                {
+                    notValues.Remove(v);
+                    values.Add(v);
+                }
+            }
+            else if(s == 0)
+            {
+                foreach(var v in value)
+                {
+                    notValues.Remove(v);
+                    values.Remove(v);
+                }
+            }
+            else
+            {
+                foreach(var v in value)
+                {
+                    notValues.Add(v);
+                    values.Remove(v);
+                }
+            }
+        }
+        if(s == -1)
+        {
+            ImGuiEx.Tooltip($"如果匹配到带叉号的条件，规则将不会生效。");
+        }
+    }
+    private static List<TimelineSegment> RenderTimeline(List<TimelineSegment> precise_Times)
+    {
+
+        var cursorPos = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var startX = cursorPos.X + ImGui.CalcTextSize("12:00 AM").X / 2;
+        var endX = startX + ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("12:00 AM").X;
+        var timelineWidth = endX - startX;
+        var centerY = cursorPos.Y + 20;
+        float height = 0;
+
+        var timePoints = GetPoints(precise_Times);
+        var segmentStates = GetStates(precise_Times);
+
+        // Hover tooltip
+        var mousePos = ImGui.GetMousePos();
+        var hoveringTimeline = mousePos.Y > centerY - 5 && mousePos.Y < centerY + 5 && mousePos.X >= startX && mousePos.X <= endX;
+        var hoverTime = (float)(Math.Round((mousePos.X - startX) / timelineWidth * 24 * 60 / 5.0) * 5) / (24 * 60);
+        timePoints = timePoints.Distinct().OrderBy(x => x).ToList();
+        for(var i = 0; i < timePoints.Count - 1; i++)
+        {
+            var x1 = startX + timePoints[i] * timelineWidth;
+            var x2 = startX + timePoints[i + 1] * timelineWidth;
+
+            var segmentState = precise_Times[i].State;
+            var color = segmentState switch
+            {
+                1 => ImGui.GetColorU32(new Vector4(0, 1, 0, 1)),
+                _ => ImGui.GetColorU32(new Vector4(1, 1, 1, 1))
+            };
+            if(C.AllowNegativeConditions)
+            {
+                color = segmentState switch
                 {
                     1 => ImGui.GetColorU32(new Vector4(0, 1, 0, 1)),
+                    2 => ImGui.GetColorU32(new Vector4(1, 0, 0, 1)),
                     _ => ImGui.GetColorU32(new Vector4(1, 1, 1, 1))
                 };
-                if(C.AllowNegativeConditions)
-                {
-                    color = segmentState switch
-                    {
-                        1 => ImGui.GetColorU32(new Vector4(0, 1, 0, 1)),
-                        2 => ImGui.GetColorU32(new Vector4(1, 0, 0, 1)),
-                        _ => ImGui.GetColorU32(new Vector4(1, 1, 1, 1))
-                    };
-                }
-
-                drawList.AddLine(new Vector2(x1, centerY), new Vector2(x2, centerY), color, 2f);
-
-                if(ImGui.IsMouseClicked(ImGuiMouseButton.Left) && x1 < mousePos.X && mousePos.X <= x2 && Math.Abs(mousePos.Y - centerY) <= 7)
-                {
-                    var segment = precise_Times[i];
-                    var stateLimit = C.AllowNegativeConditions ? 3 : 2;
-                    segment.State = (segment.State + 1) % stateLimit;
-                    precise_Times[i] = segment;
-                }
-
-                if(ImGui.IsMouseClicked(ImGuiMouseButton.Right) && x1 < mousePos.X && mousePos.X <= x2 && Math.Abs(mousePos.Y - centerY) <= 7)
-                {
-                    var segment = precise_Times[i];
-                    var stateLimit = C.AllowNegativeConditions ? 3 : 2;
-                    segment.State = (segment.State - 1 + stateLimit) % stateLimit;
-                    precise_Times[i] = segment;
-                }
             }
 
-            List<Vector2> labelBoundryBoxes = [];
-            // Draw points + Identify if removeable
-            var hoverLabel = FormatTime(hoverTime);
-            var tooltipText = $"{hoverLabel} | Mouse Middle to add";
-            for(var i = 0; i < timePoints.Count; i++)
-            {
-                var xPos = startX + timePoints[i] * timelineWidth;
-                var pointPos = new Vector2(xPos, centerY);
-                var color = ImGui.GetColorU32(new Vector4(0.2f, 0.6f, 1f, 1f));
-                if(hoveringTimeline && Math.Abs(hoverTime - timePoints[i]) < 10f / timelineWidth)
-                {
-                    color = ImGui.GetColorU32(new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
-                }
-                var label = FormatTime(timePoints[i]);
+            drawList.AddLine(new Vector2(x1, centerY), new Vector2(x2, centerY), color, 2f);
 
-                if(hoveringTimeline && Math.Abs(hoverTime - timePoints[i]) < 10f / timelineWidth)
-                {
-                    if(timePoints[i] == 0f || timePoints[i] == 1f) { tooltipText = $"{label} | May not remove"; }
-                    else { tooltipText = $"{label} | Mouse Middle to remove."; }
-                }
-
-                var textSize = ImGui.CalcTextSize(label);
-
-                var labelX = xPos - textSize.X / 2;
-                var labelY = centerY + 5;
-
-                foreach(var box in labelBoundryBoxes)
-                {
-                    if(labelX < box.X && labelY == box.Y)
-                    {
-                        labelY += textSize.Y + 2;
-                        drawList.AddLine(pointPos, new Vector2(xPos, labelY), ImGui.GetColorU32(new Vector4(1, 1, 1, 1)), 1.0f);
-                    }
-                }
-
-                drawList.AddText(new Vector2(labelX, labelY), ImGui.GetColorU32(new Vector4(1, 1, 1, 1)), label);
-                if(labelY + textSize.Y - cursorPos.Y + 20 > height)
-                {
-                    height = labelY + textSize.Y - cursorPos.Y + 20;
-                }
-                labelBoundryBoxes.Add(new Vector2(xPos + textSize.X / 2, labelY));
-                drawList.AddCircleFilled(pointPos, 5f, color);
-            }
-            if(hoveringTimeline)
-            {
-                ImGui.SetTooltip(tooltipText);
-            }
-
-            timePoints = timePoints.Distinct().OrderBy(x => Vector2.Distance(mousePos, new Vector2(startX + x * timelineWidth, centerY))).ToList();
-            if(hoveringTimeline && ImGui.IsMouseClicked(ImGuiMouseButton.Middle))
-            {
-                if(Math.Abs(hoverTime - timePoints[0]) < 10f / timelineWidth)
-                {
-                    if(!(timePoints[0] == 0f || timePoints[0] == 1f))
-                    {
-                        RemoveSegment(precise_Times, hoverTime, timelineWidth);
-                    }
-                }
-                else if(Math.Abs(hoverTime - timePoints[0]) > 10f / timelineWidth)
-                {
-                    AddSegment(precise_Times, hoverTime);
-                }
-            }
-            ImGui.SetWindowSize(new Vector2(400, height), ImGuiCond.Always);
-            return precise_Times;
-        }
-        private static void AddSegment(List<TimelineSegment> precise_Times, float hoverTime)
-        {
-            for(var i = 0; i < precise_Times.Count; i++)
+            if(ImGui.IsMouseClicked(ImGuiMouseButton.Left) && x1 < mousePos.X && mousePos.X <= x2 && Math.Abs(mousePos.Y - centerY) <= 7)
             {
                 var segment = precise_Times[i];
+                var stateLimit = C.AllowNegativeConditions ? 3 : 2;
+                segment.State = (segment.State + 1) % stateLimit;
+                precise_Times[i] = segment;
+            }
 
-                if(hoverTime > segment.Start && hoverTime < segment.End)
+            if(ImGui.IsMouseClicked(ImGuiMouseButton.Right) && x1 < mousePos.X && mousePos.X <= x2 && Math.Abs(mousePos.Y - centerY) <= 7)
+            {
+                var segment = precise_Times[i];
+                var stateLimit = C.AllowNegativeConditions ? 3 : 2;
+                segment.State = (segment.State - 1 + stateLimit) % stateLimit;
+                precise_Times[i] = segment;
+            }
+        }
+
+        List<Vector2> labelBoundryBoxes = [];
+        // Draw points + Identify if removeable
+        var hoverLabel = FormatTime(hoverTime);
+        var tooltipText = $"{hoverLabel} | 鼠标中键添加";
+        for(var i = 0; i < timePoints.Count; i++)
+        {
+            var xPos = startX + timePoints[i] * timelineWidth;
+            var pointPos = new Vector2(xPos, centerY);
+            var color = ImGui.GetColorU32(new Vector4(0.2f, 0.6f, 1f, 1f));
+            if(hoveringTimeline && Math.Abs(hoverTime - timePoints[i]) < 10f / timelineWidth)
+            {
+                color = ImGui.GetColorU32(new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+            }
+            var label = FormatTime(timePoints[i]);
+
+            if(hoveringTimeline && Math.Abs(hoverTime - timePoints[i]) < 10f / timelineWidth)
+            {
+                if(timePoints[i] == 0f || timePoints[i] == 1f) { tooltipText = $"{label} | 可能无法删除"; }
+                else { tooltipText = $"{label} | 鼠标中键删除"; }
+            }
+
+            var textSize = ImGui.CalcTextSize(label);
+
+            var labelX = xPos - textSize.X / 2;
+            var labelY = centerY + 5;
+
+            foreach(var box in labelBoundryBoxes)
+            {
+                if(labelX < box.X && labelY == box.Y)
                 {
-                    // Remove the original segment
-                    precise_Times.RemoveAt(i);
+                    labelY += textSize.Y + 2;
+                    drawList.AddLine(pointPos, new Vector2(xPos, labelY), ImGui.GetColorU32(new Vector4(1, 1, 1, 1)), 1.0f);
+                }
+            }
 
-                    // Create two new segments
-                    var firstSegment = new TimelineSegment(segment.Start, hoverTime, segment.State);
-                    var secondSegment = new TimelineSegment(hoverTime, segment.End, segment.State);
+            drawList.AddText(new Vector2(labelX, labelY), ImGui.GetColorU32(new Vector4(1, 1, 1, 1)), label);
+            if(labelY + textSize.Y - cursorPos.Y + 20 > height)
+            {
+                height = labelY + textSize.Y - cursorPos.Y + 20;
+            }
+            labelBoundryBoxes.Add(new Vector2(xPos + textSize.X / 2, labelY));
+            drawList.AddCircleFilled(pointPos, 5f, color);
+        }
+        if(hoveringTimeline)
+        {
+            ImGui.SetTooltip(tooltipText);
+        }
 
-                    // Insert the new segments in place of the removed one
-                    precise_Times.Insert(i, secondSegment);
-                    precise_Times.Insert(i, firstSegment);
+        timePoints = timePoints.Distinct().OrderBy(x => Vector2.Distance(mousePos, new Vector2(startX + x * timelineWidth, centerY))).ToList();
+        if(hoveringTimeline && ImGui.IsMouseClicked(ImGuiMouseButton.Middle))
+        {
+            if(Math.Abs(hoverTime - timePoints[0]) < 10f / timelineWidth)
+            {
+                if(!(timePoints[0] == 0f || timePoints[0] == 1f))
+                {
+                    RemoveSegment(precise_Times, hoverTime, timelineWidth);
+                }
+            }
+            else if(Math.Abs(hoverTime - timePoints[0]) > 10f / timelineWidth)
+            {
+                AddSegment(precise_Times, hoverTime);
+            }
+        }
+        ImGui.SetWindowSize(new Vector2(400, height), ImGuiCond.Always);
+        return precise_Times;
+    }
+    private static void AddSegment(List<TimelineSegment> precise_Times, float hoverTime)
+    {
+        for(var i = 0; i < precise_Times.Count; i++)
+        {
+            var segment = precise_Times[i];
 
-                    return; // Exit after modification to prevent further iteration
+            if(hoverTime > segment.Start && hoverTime < segment.End)
+            {
+                // Remove the original segment
+                precise_Times.RemoveAt(i);
+
+                // Create two new segments
+                var firstSegment = new TimelineSegment(segment.Start, hoverTime, segment.State);
+                var secondSegment = new TimelineSegment(hoverTime, segment.End, segment.State);
+
+                // Insert the new segments in place of the removed one
+                precise_Times.Insert(i, secondSegment);
+                precise_Times.Insert(i, firstSegment);
+
+                return; // Exit after modification to prevent further iteration
+            }
+        }
+    }
+    private static void RemoveSegment(List<TimelineSegment> precise_Times, float hoverTime, float timelineWidth)
+    {
+        var pixelTolerance = 10f / timelineWidth;
+        var closestIndex = -1;
+        var closestDistance = float.MaxValue;
+
+        // Find the closest valid segment split within tolerance
+        for(var i = 0; i < precise_Times.Count - 1; i++)
+        {
+            var first = precise_Times[i];
+            var second = precise_Times[i + 1];
+
+            var endDistance = Math.Abs(first.End - hoverTime);
+            var startDistance = Math.Abs(second.Start - hoverTime);
+
+            if(endDistance <= pixelTolerance && startDistance <= pixelTolerance)
+            {
+                var totalDistance = endDistance + startDistance;
+                if(totalDistance < closestDistance)
+                {
+                    closestDistance = totalDistance;
+                    closestIndex = i;
                 }
             }
         }
-        private static void RemoveSegment(List<TimelineSegment> precise_Times, float hoverTime, float timelineWidth)
+
+        // If a valid closest segment was found, merge it
+        if(closestIndex != -1)
         {
-            var pixelTolerance = 10f / timelineWidth;
-            var closestIndex = -1;
-            var closestDistance = float.MaxValue;
+            var first = precise_Times[closestIndex];
+            var second = precise_Times[closestIndex + 1];
 
-            // Find the closest valid segment split within tolerance
-            for(var i = 0; i < precise_Times.Count - 1; i++)
-            {
-                var first = precise_Times[i];
-                var second = precise_Times[i + 1];
+            // Create a merged segment
+            var mergedSegment = new TimelineSegment(first.Start, second.End, first.State);
 
-                var endDistance = Math.Abs(first.End - hoverTime);
-                var startDistance = Math.Abs(second.Start - hoverTime);
+            // Remove the two segments
+            precise_Times.RemoveAt(closestIndex + 1);
+            precise_Times.RemoveAt(closestIndex);
 
-                if(endDistance <= pixelTolerance && startDistance <= pixelTolerance)
-                {
-                    var totalDistance = endDistance + startDistance;
-                    if(totalDistance < closestDistance)
-                    {
-                        closestDistance = totalDistance;
-                        closestIndex = i;
-                    }
-                }
-            }
-
-            // If a valid closest segment was found, merge it
-            if(closestIndex != -1)
-            {
-                var first = precise_Times[closestIndex];
-                var second = precise_Times[closestIndex + 1];
-
-                // Create a merged segment
-                var mergedSegment = new TimelineSegment(first.Start, second.End, first.State);
-
-                // Remove the two segments
-                precise_Times.RemoveAt(closestIndex + 1);
-                precise_Times.RemoveAt(closestIndex);
-
-                // Insert the merged segment
-                precise_Times.Insert(closestIndex, mergedSegment);
-            }
+            // Insert the merged segment
+            precise_Times.Insert(closestIndex, mergedSegment);
         }
+    }
 
-        private static List<int> GetStates(List<TimelineSegment> precise_Times)
+    private static List<int> GetStates(List<TimelineSegment> precise_Times)
+    {
+        List<int> segments = [];
+        foreach(var time in precise_Times)
         {
-            List<int> segments = [];
-            foreach(var time in precise_Times)
-            {
-                segments.Add(time.State);
-            }
-            return segments;
+            segments.Add(time.State);
         }
+        return segments;
+    }
 
-        private static List<float> GetPoints(List<TimelineSegment> precise_Times)
+    private static List<float> GetPoints(List<TimelineSegment> precise_Times)
+    {
+        List<float> floats = [];
+        foreach(var time in precise_Times)
         {
-            List<float> floats = [];
-            foreach(var time in precise_Times)
-            {
-                floats.Add(time.Start);
-            }
-            floats.Add(precise_Times.Last().End);
-            return floats;
+            floats.Add(time.Start);
         }
+        floats.Add(precise_Times.Last().End);
+        return floats;
+    }
 
-        private static string FormatTime(float time)
-        {
-            var totalMinutes = (int)(time * 24 * 60);
-            var hours = (totalMinutes / 60) % 24;
+    private static string FormatTime(float time)
+    {
+        var totalMinutes = (int)(time * 24 * 60);
+        var hours = (totalMinutes / 60) % 24;
 
-            totalMinutes = (int)(Math.Round(totalMinutes / 5.0) * 5);
-            var minutes = totalMinutes % 60;
-            var period = hours > 12 ? "PM" : "AM";
+        totalMinutes = (int)(Math.Round(totalMinutes / 5.0) * 5);
+        var minutes = totalMinutes % 60;
+        var period = hours > 12 ? "PM" : "AM";
 
-            hours = hours % 12;
-            if(hours == 0) hours = 12;
-            return $"{hours}:{minutes:D2} {period}";
-        }
+        hours = hours % 12;
+        if(hours == 0) hours = 12;
+        return $"{hours}:{minutes:D2} {period}";
     }
 }

@@ -1,23 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace DynamicBridge.Core;
 
-namespace DynamicBridge.Core
+public enum CharacterState
 {
-    public enum CharacterState
-    {
-        浮水,
-        游泳,
-        潜水,
-        地面坐骑,
-        空中坐骑,
-        水下坐骑,
-        涉水,
-        观看过场动画,
-        战斗中,
-        无法战斗,
-        制作中,
-    }
+    漂浮,
+    游泳,
+    潜水,
+    地面坐骑,
+    空中飞行,
+    水下飞行,
+    涉水,
+    观看过场动画,
+    战斗中,
+    死亡,
+    制作中,
 }

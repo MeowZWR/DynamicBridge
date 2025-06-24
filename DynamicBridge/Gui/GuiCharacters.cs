@@ -1,9 +1,4 @@
 ﻿using ECommons.GameHelpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DynamicBridge.Gui;
 public static class GuiCharacters
@@ -12,14 +7,60 @@ public static class GuiCharacters
     public static void Draw()
     {
         ImGuiEx.SetNextItemFullWidth();
-        ImGui.InputTextWithHint($"##Filter1", "按角色名称搜索...", ref Filters[1], 100, Utils.CensorFlags);
+        ImGuiEx.InputWithRightButtonsArea(() =>
+        {
+            ImGui.InputTextWithHint($"##Filter1", "按角色名称搜索...", ref Filters[1], 100, Utils.CensorFlags);
+        }, () =>
+        {
+            if(ImGuiEx.IconButton(FontAwesomeIcon.UserPlus))
+            {
+                ImGui.OpenPopup("NewChara");
+            }
+            ImGuiEx.Tooltip("手动注册新角色");
+        });
+
+        if(ImGui.BeginPopup("NewChara"))
+        {
+            ImGui.SetNextItemWidth(150f);
+            ImGui.InputTextWithHint("##name2", "角色名称@世界", ref NewChara, 50);
+            ImGui.SetNextItemWidth(150f);
+            ImGui.InputTextWithHint("##cid", "角色/内容 ID", ref NewCID, 50);
+            if(ImGuiEx.IconButtonWithText(FontAwesomeIcon.UserPlus, "添加新角色"))
+            {
+                if(NewChara.Length > 2 && NewChara.Split(" ").Length == 2 && NewChara.Contains('@') && ulong.TryParse(NewCID, out var cid) && cid > 0)
+                {
+                    if(C.SeenCharacters.ContainsKey(cid))
+                    {
+                        Notify.Error("此角色 ID 已存在");
+                    }
+                    else if(C.SeenCharacters.Values.Select(x => x.ToLower()).Contains(NewChara.ToLower()))
+                    {
+                        Notify.Error("此角色名称已存在");
+                    }
+                    else
+                    {
+                        C.SeenCharacters[cid] = NewChara;
+                        NewChara = "";
+                        NewCID = "";
+                        ImGui.CloseCurrentPopup();
+                        Notify.Success("角色成功添加");
+                    }
+                }
+                else
+                {
+                    Notify.Error("无效的名称或角色/内容 ID");
+                }
+            }
+            ImGui.EndPopup();
+        }
 
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
-        if(ImGui.BeginTable($"##characters", 3, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedSame))
+        if(ImGui.BeginTable($"##characters", 4, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit))
         {
-            ImGui.TableSetupColumn("角色名称", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("名称");
+            ImGui.TableSetupColumn("CID");
             ImGui.TableSetupColumn("分配的配置文件", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableSetupColumn(" ");
             ImGui.TableHeadersRow();
 
             foreach(var x in C.SeenCharacters)
@@ -31,6 +72,15 @@ public static class GuiCharacters
                 ImGui.TableNextRow();
                 ImGui.TableNextColumn();
                 ImGuiEx.TextV(Player.CID == x.Key ? ImGuiColors.HealerGreen : null, $"{Censor.Character(x.Value)}");
+                ImGui.TableNextColumn();
+                if(!C.NoNames)
+                {
+                    ImGuiEx.TextCopy($"{x.Key}");
+                }
+                else
+                {
+                    ImGuiEx.Text("被设置隐藏");
+                }
                 ImGui.TableNextColumn();
 
                 var currentProfile = C.ProfilesL.FirstOrDefault(z => z.Characters.Contains(x.Key));
@@ -103,4 +153,7 @@ public static class GuiCharacters
         }
         ImGui.PopStyleVar();
     }
+
+    private static string NewChara = "";
+    private static string NewCID = "";
 }
