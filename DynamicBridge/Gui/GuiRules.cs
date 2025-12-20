@@ -704,17 +704,44 @@ public static unsafe class GuiRules
                     if(ImGui.BeginCombo("##world", rule.Worlds.ToWorldNames().PrintRange(rule.Not.Worlds.ToWorldNames(), out var fullList), C.ComboSize))
                     {
                         FiltersSelection();
+                        var cnDataCenterIds = new uint[] { 101, 102, 103, 104 };
+                        var cnDataCenters = Svc.Data.GetExcelSheet<WorldDCGroupType>()
+                            .Where(x => cnDataCenterIds.Contains(x.RowId))
+                            .OrderBy(x => x.RowId)
+                            .ToArray();
+                        
+                        foreach(var dc in cnDataCenters)
+                        {
+                            var worlds = ExcelWorldHelper.GetPublicWorlds().Where(x => x.DataCenter.RowId == dc.RowId).OrderBy(x => x.Name.ToString());
+                            if(worlds.Any())
+                            {
+                                ImGuiEx.Text($"{dc.Name}");
+                                foreach(var cond in worlds)
+                                {
+                                    var name = cond.Name.ToString();
+                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                                    if(OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.RowId)) continue;
+                                    ImGuiEx.Spacing();
+                                    DrawSelector(name, cond.RowId, rule.Worlds, rule.Not.Worlds);
+                                }
+                            }
+                        }
+                        
                         foreach(var dc in ExcelWorldHelper.GetDataCenters(Enum.GetValues<ExcelWorldHelper.Region>()))
                         {
-                            var worlds = ExcelWorldHelper.GetPublicWorlds().Where(x => x.DataCenter.RowId == dc.RowId);
-                            ImGuiEx.Text($"{dc.Name}");
-                            foreach(var cond in worlds)
+                            if(cnDataCenterIds.Contains(dc.RowId)) continue;
+                            var worlds = ExcelWorldHelper.GetPublicWorlds().Where(x => x.DataCenter.RowId == dc.RowId).OrderBy(x => x.Name.ToString());
+                            if(worlds.Any())
                             {
-                                var name = cond.Name.ToString();
-                                if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
-                                if(OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.RowId)) continue;
-                                ImGuiEx.Spacing();
-                                DrawSelector(name, cond.RowId, rule.Worlds, rule.Not.Worlds);
+                                ImGuiEx.Text($"{dc.Name}");
+                                foreach(var cond in worlds)
+                                {
+                                    var name = cond.Name.ToString();
+                                    if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                                    if(OnlySelected[filterCnt] && !rule.Worlds.Contains(cond.RowId)) continue;
+                                    ImGuiEx.Spacing();
+                                    DrawSelector(name, cond.RowId, rule.Worlds, rule.Not.Worlds);
+                                }
                             }
                         }
                         ImGui.EndCombo();
