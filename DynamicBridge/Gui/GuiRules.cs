@@ -250,6 +250,7 @@ public static unsafe class GuiRules
     {
         postAction = null;
         var active = (bool[])[
+                C.Cond_Delay,
                 C.Cond_State,
                 C.Cond_Biome,
                 C.Cond_Emote,
@@ -262,6 +263,7 @@ public static unsafe class GuiRules
                 C.Cond_Zone,
                 C.Cond_ZoneGroup,
                 C.Cond_Players,
+                C.Cond_OnlineStatus,
             ];
 
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
@@ -273,14 +275,16 @@ public static unsafe class GuiRules
             if(C.Cond_Biome) ImGui.TableSetupColumn("生物群系");
             if(C.Cond_Weather) ImGui.TableSetupColumn("天气");
             if(C.Cond_Time) ImGui.TableSetupColumn("时间");
-            if(C.Cond_ZoneGroup) ImGui.TableSetupColumn("区域组");
+            if(C.Cond_ZoneGroup) ImGui.TableSetupColumn("区域类型");
             if(C.Cond_Zone) ImGui.TableSetupColumn("区域");
             if(C.Cond_House) ImGui.TableSetupColumn("住宅");
             if(C.Cond_Emote) ImGui.TableSetupColumn("情感动作");
             if(C.Cond_Job) ImGui.TableSetupColumn("职业");
-            if(C.Cond_World) ImGui.TableSetupColumn("世界");
+            if(C.Cond_World) ImGui.TableSetupColumn("服务器");
             if(C.Cond_Gearset) ImGui.TableSetupColumn("套装");
             if(C.Cond_Players) ImGui.TableSetupColumn("玩家");
+            if(C.Cond_OnlineStatus) ImGui.TableSetupColumn("在线状态");
+            if(C.Cond_Delay) ImGui.TableSetupColumn("延迟");
             ImGui.TableSetupColumn("预设");
             ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableHeadersRow();
@@ -329,7 +333,9 @@ public static unsafe class GuiRules
 
                 ImGui.SameLine();
                 ImGui.PushFont(UiBuilder.IconFont);
+                if(col2) ImGui.PushStyleColor(ImGuiCol.Text, EColor.GreenBright);
                 ImGuiEx.ButtonCheckbox("\uf103", ref rule.Passthrough);
+                if(col2) ImGui.PopStyleColor();
                 ImGui.PopFont();
                 ImGuiEx.Tooltip("启用此规则的穿透模式。DynamicBridge在匹配到此规则后将继续搜索，所有符合条件的规则都将被依次顺序应用。");
 
@@ -797,6 +803,58 @@ public static unsafe class GuiRules
                         ImGuiEx.Tooltip(UI.AnyNotice + fullList);
                 }
                 filterCnt++;
+
+                if(C.Cond_OnlineStatus)
+                {
+                    ImGui.TableNextColumn();
+                    //Online Status
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##onlinestatus", rule.OnlineStatuses.Select(x => P.OnlineStatusManager.OnlineStatuses.TryGetValue(x, out var n) ? n : $"{x}").ToHashSet().PrintRange(rule.Not.OnlineStatuses.Select(x => P.OnlineStatusManager.OnlineStatuses.TryGetValue(x, out var n) ? n : $"{x}").ToHashSet(), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+                        foreach(var cond in P.OnlineStatusManager.OnlineStatuses)
+                        {
+                            var name = cond.Value;
+                            if(name.IsNullOrEmpty()) continue;
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.OnlineStatuses.Contains(cond.Key)) continue;
+                            var iconSourceId = P.OnlineStatusManager.IconOverrides.TryGetValue(cond.Key, out var overrideId) ? overrideId : cond.Key;
+                            var statusRow = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.OnlineStatus>().GetRowOrDefault(iconSourceId);
+                            if(statusRow != null && ThreadLoadImageHandler.TryGetIconTextureWrap((uint)statusRow.Value.Icon, false, out var texture))
+                            {
+                                ImGui.Image(texture.Handle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector($"{cond.Value}##{cond.Key}", cond.Key, rule.OnlineStatuses, rule.Not.OnlineStatuses);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+                
+                if(C.Cond_Delay)
+                {
+                    ImGui.TableNextColumn();
+                    //Delays
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    var delayText = rule.ActivationDelay > 0 || rule.DeactivationDelay > 0 ?
+                        $"Act:{rule.ActivationDelay}s / Dct:{rule.DeactivationDelay}s" : "- No delays -";
+                    if(ImGui.BeginCombo("##delays", delayText, C.ComboSize))
+                    {
+                        ImGui.SetWindowFontScale(0.9f);
+                        ImGui.Text("Activation Delay (seconds):");
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                        ImGui.SliderInt("##actdelay", ref rule.ActivationDelay, 0, 60);
+                        ImGui.Spacing();
+                        ImGui.Text("Deactivation Delay (seconds):");
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                        ImGui.SliderInt("##dctdelay", ref rule.DeactivationDelay, 0, 60);
+                        ImGui.SetWindowFontScale(1f);
+                        ImGui.EndCombo();
+                    }
+                    ImGuiEx.Tooltip("Set delays before rule activates or deactivates");
+                }
 
                 ImGui.TableNextColumn();
 

@@ -13,4 +13,5 @@ public enum CharacterState
     战斗中,
     死亡,
     制作中,
+    拔出武器,
 }

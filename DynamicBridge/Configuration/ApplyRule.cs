@@ -9,6 +9,8 @@ public class ApplyRule
     [NonSerialized] internal string GUID = Guid.NewGuid().ToString();
     public int StickyRandom = 0;
     public bool Enabled = true;
+    public int ActivationDelay = 0;
+    public int DeactivationDelay = 0;
 
     public List<CharacterState> States = [];
     public List<SpecialTerritory> SpecialTerritories = [];
@@ -22,6 +24,7 @@ public class ApplyRule
     public List<uint> Worlds = [];
     public List<int> Gearsets = [];
     public List<string> Players = [];
+    public List<uint> OnlineStatuses = [];
     public List<TimelineSegment> Precise_Times = [
         new TimelineSegment((float)0/24,(float)5/24,0),
         new TimelineSegment((float)5/24,(float)7/24,0),
@@ -50,5 +53,6 @@ public class ApplyRule
         public List<uint> Worlds = [];
         public List<int> Gearsets = [];
         public List<string> Players = [];
+        public List<uint> OnlineStatuses = [];
     }
 }

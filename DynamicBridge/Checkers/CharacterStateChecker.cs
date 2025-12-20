@@ -18,7 +18,8 @@ public static class CharacterStateChecker
             || Svc.Condition[ConditionFlag.WatchingCutscene78],
         [CharacterState.战斗中] = () => Svc.Condition[ConditionFlag.InCombat],
         [CharacterState.死亡] = () => Player.Available && Player.Object.IsDead,
-        [CharacterState.制作中] = () => Svc.Condition[ConditionFlag.Crafting]
+        [CharacterState.制作中] = () => Svc.Condition[ConditionFlag.Crafting],
+        [CharacterState.拔出武器] = () => { unsafe { return Player.Available && Player.BattleChara->IsWeaponDrawn; } },
     };
 
     public static bool Check(this CharacterState state)

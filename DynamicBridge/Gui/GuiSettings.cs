@@ -123,6 +123,8 @@ public static class GuiSettings
                 () => ImGui.Checkbox($"服务器", ref C.Cond_World),
                 () => ImGui.Checkbox($"套装模板", ref C.Cond_Gearset),
                 () => ImGui.Checkbox($"附近玩家", ref C.Cond_Players),
+                () => ImGui.Checkbox($"在线状态", ref C.Cond_OnlineStatus),
+                () => ImGui.Checkbox($"延迟", ref C.Cond_Delay),
             ],
                 (int)(ImGui.GetContentRegionAvail().X / 180f), ImGuiTableFlags.BordersInner);
             if(C.Cond_Time)
