@@ -18,6 +18,7 @@ public class Config : IEzConfig
     public bool EnableHonorific = true;
     public bool EnablePenumbra = true;
     public bool EnableMoodles = true;
+    public bool EnableLoci = true;
     public GlamourerNoRuleBehavior GlamNoRuleBehaviour = GlamourerNoRuleBehavior.RevertToNormal;
     public bool RevertBeforeAutomationRestore = false;
     public bool RevertGlamourerBeforeApply = false;
@@ -54,7 +55,10 @@ public class Config : IEzConfig
     public bool Cond_Gearset = false;
     public bool Cond_Players = false;
     public bool Cond_OnlineStatus = false;
+    public bool Cond_Mount = false;
     public bool Cond_Delay = false;
+
+    public Dictionary<string, Dictionary<string, bool>> Extra_Conditions = [];
 
     public bool Cond_Time_Precise = false;
     public Dictionary<ulong, List<GearsetEntry>> GearsetNameCacheCID = [];

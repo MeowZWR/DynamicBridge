@@ -1,5 +1,6 @@
 using DynamicBridge.Configuration;
 using DynamicBridge.Core;
+using DynamicBridge.IPC.Conditions;
 
 namespace DynamicBridge.Gui;
 public static class GuiSettings
@@ -124,6 +125,7 @@ public static class GuiSettings
                 () => ImGui.Checkbox($"套装模板", ref C.Cond_Gearset),
                 () => ImGui.Checkbox($"附近玩家", ref C.Cond_Players),
                 () => ImGui.Checkbox($"在线状态", ref C.Cond_OnlineStatus),
+                () => ImGui.Checkbox($"坐骑", ref C.Cond_Mount),
                 () => ImGui.Checkbox($"延迟", ref C.Cond_Delay),
             ],
                 (int)(ImGui.GetContentRegionAvail().X / 180f), ImGuiTableFlags.BordersInner);
@@ -144,6 +146,24 @@ public static class GuiSettings
             else
             {
                 C.Cond_Time_Precise = false;
+            }
+
+            if (P.ConditionsManager.conditions.Count > 0)
+            {
+	            ImGuiEx.TextWrapped("Enable extra conditions provided by other plugins.");
+	            ImGuiEx.EzTableColumns("extrasFromPlugins", P.ConditionsManager.conditions.SelectMany(source =>
+		            {
+			            return source.Value.Select<KeyValuePair<string, ExtraCondition>, Action>(condition =>
+			            {
+				            return () =>
+				            {
+					            bool active = C.Extra_Conditions[source.Key][condition.Key];
+					            ImGui.Checkbox(condition.Value.label, ref active);
+					            C.Extra_Conditions[source.Key][condition.Key] = active;
+				            };
+			            });
+		            }).ToArray()
+	            );
             }
             ImGuiGroup.EndGroupBox();
         }
@@ -205,6 +225,10 @@ public static class GuiSettings
             //moodles
             ImGui.Checkbox("Moodles", ref C.EnableMoodles);
             DrawPluginCheck("Moodles", "1.0.0.15");
+
+            //loci
+            ImGui.Checkbox("Loci", ref C.EnableLoci);
+            DrawPluginCheck("Loci", "0.0.2.0");
 
             ImGuiGroup.EndGroupBox();
         }

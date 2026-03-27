@@ -1,5 +1,6 @@
 ﻿using ECommons.GameHelpers;
 using ECommons.Reflection;
+using Glamourer.Api.IpcSubscribers;
 
 namespace DynamicBridge.IPC.Glamourer;
 public class GlamourerReflector
@@ -10,7 +11,7 @@ public class GlamourerReflector
         {
             if(DalamudReflector.TryGetDalamudPlugin("Glamourer", out var plugin, out var context, true, true))
             {
-                var config = plugin.GetFoP("_services").Call(context.Assemblies, "GetService", ["Glamourer.Configuration"], []);
+                var config = plugin.GetFoP("_services").Call(context.Assemblies, "GetService", ["Glamourer.Config.Configuration"], []);
                 return config.GetFoP<bool>("EnableAutoDesigns");
             }
         }
@@ -27,7 +28,7 @@ public class GlamourerReflector
         {
             if(DalamudReflector.TryGetDalamudPlugin("Glamourer", out var plugin, out var context, true, true))
             {
-                var config = plugin.GetFoP("_services").Call(context.Assemblies, "GetService", ["Glamourer.Configuration"], []);
+                var config = plugin.GetFoP("_services").Call(context.Assemblies, "GetService", ["Glamourer.Config.Configuration"], []);
                 config.SetFoP("EnableAutoDesigns", state);
             }
         }
@@ -70,7 +71,8 @@ public class GlamourerReflector
     {
         try
         {
-            if(DalamudReflector.TryGetDalamudPlugin("Glamourer", out var plugin, out var context, true, true))
+            return new GetExtendedDesignData(Svc.PluginInterface).Invoke(guid).FullPath;
+            /*if(DalamudReflector.TryGetDalamudPlugin("Glamourer", out var plugin, out var context, true, true))
             {
                 var manager = plugin.GetFoP("_services").Call(context.Assemblies, "GetService", ["Glamourer.Designs.DesignManager"], []);
                 var designList = manager.GetFoP<System.Collections.IList>("Designs");
@@ -89,7 +91,7 @@ public class GlamourerReflector
                         return null;
                     }
                 }
-            }
+            }*/
         }
         catch(Exception ex)
         {

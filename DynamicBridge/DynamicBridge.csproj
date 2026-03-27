@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Authors>NightmareXIV</Authors>
-        <Version>1.0.8.6</Version>
+        <Version>1.0.8.7</Version>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -36,6 +36,7 @@
         <ProjectReference Include="..\Glamourer.Api\Glamourer.Api.csproj" />
         <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
         <ProjectReference Include="..\Penumbra.Api\Penumbra.Api.csproj" />
+	   <ProjectReference Include="..\Loci.Api\Loci.Api.csproj" />
     </ItemGroup>
 
     <ItemGroup>

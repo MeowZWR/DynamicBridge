@@ -14,3 +14,6 @@
 	path = Penumbra.Api
 	url = https://github.com/MeowZWR/Penumbra.Api
 	branch = cn
+[submodule "Loci.Api"]
+	path = Loci.Api
+	url = https://github.com/Limiana/Loci.Api

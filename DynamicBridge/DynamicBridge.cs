@@ -5,6 +5,7 @@ using DynamicBridge.IPC;
 using DynamicBridge.IPC.Customize;
 using DynamicBridge.IPC.Glamourer;
 using DynamicBridge.IPC.Honorific;
+using DynamicBridge.IPC.Loci;
 using DynamicBridge.IPC.Moodles;
 using DynamicBridge.IPC.Penumbra;
 using ECommons.Automation.LegacyTaskManager;
@@ -20,6 +21,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using System.IO;
 using System.IO.Compression;
+using DynamicBridge.IPC.Conditions;
 
 namespace DynamicBridge;
 
@@ -32,6 +34,8 @@ public unsafe class DynamicBridge : IDalamudPlugin
     public OnlineStatusManager OnlineStatusManager;
     public List<ApplyRule> LastRule = [];
     public HashSet<Guid> MoodleCleanupQueue = [];
+    // This shouldnt be needed idealy since we have methods for this now.
+    public HashSet<Guid> LociCleanupQueue = [];
     public bool ForceUpdate = false;
     public bool SoftForceUpdate = false;
     public string MyOldDesign = null;
@@ -53,8 +57,10 @@ public unsafe class DynamicBridge : IDalamudPlugin
     public CustomizePlusManager CustomizePlusManager;
     public PenumbraManager PenumbraManager;
     public MoodlesManager MoodlesManager;
+    public LociManager LociManager;
     public IpcTester IpcTester;
     public HonorificManager HonorificManager;
+    public ConditionsManager ConditionsManager;
 
     private DateTime RandomizerTimer;
     private bool RandomizedRecently = false;
@@ -113,7 +119,9 @@ public unsafe class DynamicBridge : IDalamudPlugin
             Memory = new();
             PenumbraManager = new();
             MoodlesManager = new();
+            LociManager = new();
             HonorificManager = new();
+            ConditionsManager = new();
         });
     }
 
@@ -376,11 +384,20 @@ public unsafe class DynamicBridge : IDalamudPlugin
                                 (!C.Cond_Gearset || ((x.Gearsets.Count == 0 || x.Gearsets.Contains(RaptureGearsetModule.Instance()->CurrentGearsetIndex))
                                 && (!C.AllowNegativeConditions || !x.Not.Gearsets.Contains(RaptureGearsetModule.Instance()->CurrentGearsetIndex))))
                                 &&
-                                (!C.Cond_Players || (x.Players.Count == 0 || x.Players.Any(rp => GuiPlayers.SimpleNearbyPlayers().Any(sp => rp == sp.Name && C.selectedPlayers.Any(sel => sel.Name == sp.Name && (sel.Distance >= sp.Distance || sel.Distance >= 150f)))))
-                                && (!C.AllowNegativeConditions || !x.Not.Players.Any(rp => GuiPlayers.SimpleNearbyPlayers().Any(sp => rp == sp.Name && C.selectedPlayers.Any(sel => sel.Name == sp.Name && (sel.Distance >= sp.Distance || sel.Distance >= 150f))))))
+                                (!C.Cond_Players || ((x.Players.Count == 0 || x.Players.Any(rp => GuiPlayers.SimpleNearbyPlayers().Any(sp => rp == sp.Name && C.selectedPlayers.Any(sel => sel.Name == sp.Name && (sel.Distance >= sp.Distance || sel.Distance >= 150f)))))
+                                && (!C.AllowNegativeConditions || !x.Not.Players.Any(rp => GuiPlayers.SimpleNearbyPlayers().Any(sp => rp == sp.Name && C.selectedPlayers.Any(sel => sel.Name == sp.Name && (sel.Distance >= sp.Distance || sel.Distance >= 150f)))))))
                                 &&
                                 (!C.Cond_OnlineStatus || ((x.OnlineStatuses.Count == 0 || x.OnlineStatuses.Contains(Player.OnlineStatus))
-                                && (!C.AllowNegativeConditions || !x.Not.OnlineStatuses.Contains(Player.OnlineStatus))));
+                                && (!C.AllowNegativeConditions || !x.Not.OnlineStatuses.Contains(Player.OnlineStatus))))
+                                &&
+                                (!C.Cond_Mount || ((x.Mounts.Count == 0 || x.Mounts.Contains(Utils.GetCurrentMountId()))
+                                && (!C.AllowNegativeConditions || !x.Not.Mounts.Contains(Utils.GetCurrentMountId()))))
+                                &&
+                                x.Extra_Conditions.SelectMany(extraConditionsFromPlugin => extraConditionsFromPlugin
+	                                .Value.Select(extraCondition => (sourcePlugin: extraConditionsFromPlugin.Key, conditionName: extraCondition.Key, items: extraCondition.Value)))
+	                                .Where(extraCondition => C.Extra_Conditions[extraCondition.sourcePlugin][extraCondition.conditionName])
+	                                .All(extraCondition =>
+		                                !ConditionsManager.conditions.TryGetValue(extraCondition.sourcePlugin, out var conditionsFromPlugin) || !conditionsFromPlugin.TryGetValue(extraCondition.conditionName, out var condition) || condition.IsValid(extraCondition.items, x.Not.Extra_Conditions[extraCondition.sourcePlugin][extraCondition.conditionName]));
 
                             if(conditionsMet)
                             {
@@ -499,11 +516,13 @@ public unsafe class DynamicBridge : IDalamudPlugin
                     ForceUpdate = false;
                     SoftForceUpdate = false;
                     if(C.EnableMoodles) MoodlesManager.ResetCache();
+                    if(C.EnableLoci) LociManager.ResetCache();
                     var DoNullGlamourer = true;
                     var DoNullCustomize = true;
                     var DoNullHonorific = true;
                     var DoNullPenumbra = true;
                     HashSet<Guid> moodleCleanup = [];
+                    HashSet<Guid> lociCleanup = [];
                     for(var i = 0; i < newRule.Count; i++)
                     {
                         var rule = newRule[i];
@@ -538,6 +557,10 @@ public unsafe class DynamicBridge : IDalamudPlugin
                                 if(C.EnableMoodles)
                                 {
                                     ApplyPresetMoodles(preset, moodleCleanup);
+                                }
+                                if(C.EnableLoci)
+                                {
+                                    ApplyPresetLoci(preset, lociCleanup);
                                 }
                             }
                         }
@@ -578,6 +601,22 @@ public unsafe class DynamicBridge : IDalamudPlugin
                         }
                     }
                     MoodleCleanupQueue = moodleCleanup;
+
+                    foreach(var x in LociCleanupQueue)
+                    {
+                        if(!lociCleanup.Contains(x))
+                        {
+                            if(LociManager.GetStatuses().Any(z => z.ID == x))
+                            {
+                                LociManager.RemoveStatus(x);
+                            }
+                            else if(LociManager.GetPresets().Any(z => z.ID == x))
+                            {
+                                LociManager.RemovePreset(x);
+                            }
+                        }
+                    }
+                    LociCleanupQueue = lociCleanup;
 
                     void NullPenumbra()
                     {
@@ -795,9 +834,30 @@ public unsafe class DynamicBridge : IDalamudPlugin
         }
     }
 
+    private void ApplyPresetLoci(Preset preset, HashSet<Guid> lociCleanup)
+    {
+        LociManager.ResetCache();
+        foreach(var x in preset.LociData)
+        {
+            if(LociManager.GetStatuses().TryGetFirst(z => z.ID == x.Guid, out var s))
+            {
+                PluginLog.Debug($"Applying Loci status {s}");
+                LociManager.ApplyStatus(x.Guid);
+                if(x.Cancel) lociCleanup.Add(x.Guid);
+            }
+            else if(LociManager.GetPresets().TryGetFirst(z => z.ID == x.Guid, out var p))
+            {
+                PluginLog.Debug($"Applying Loci preset {p}");
+                LociManager.ApplyPreset(x.Guid);
+                if(x.Cancel) lociCleanup.Add(x.Guid);
+            }
+        }
+    }
+
     public void Dispose()
     {
         Memory.Dispose();
+        ConditionsManager.Dispose();
         ECommonsMain.Dispose();
         P = null;
         C = null;

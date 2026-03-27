@@ -12,6 +12,7 @@ public class Preset
     public List<string> Customize = [];
     public List<string> Penumbra = [];
     public List<MoodleInfo> Moodles = [];
+    public List<LociDataInfo> LociData = [];
     public SpecialPenumbraAssignment PenumbraType = SpecialPenumbraAssignment.使用独立分配;
     public bool IsStatic = false;
     public int StickyRandomG = 0;

@@ -7,15 +7,20 @@ using ECommons.ImGuiMethods.TerritorySelection;
 using ECommons.Throttlers;
 using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
+using System.Globalization;
 using System.IO;
+using DynamicBridge.IPC.Conditions;
 using Action = System.Action;
 using Emote = Lumina.Excel.Sheets.Emote;
+using Mount = Lumina.Excel.Sheets.Mount;
 using Weather = Lumina.Excel.Sheets.Weather;
+
 
 namespace DynamicBridge.Gui;
 
 public static unsafe class GuiRules
 {
+    
     private static Vector2 iconSize => new(24f);
 
     private static string[] Filters = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
@@ -45,7 +50,6 @@ public static unsafe class GuiRules
                     }
                 }
                 ImGuiEx.Tooltip("添加新规则");
-
                 ImGui.SameLine();
                 if(ImGuiEx.IconButton(FontAwesomeIcon.Paste))
                 {
@@ -264,11 +268,26 @@ public static unsafe class GuiRules
                 C.Cond_ZoneGroup,
                 C.Cond_Players,
                 C.Cond_OnlineStatus,
+                C.Cond_Mount,
             ];
 
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, Utils.CellPadding);
         DragDrop.Begin();
-        if(ImGui.BeginTable($"##rules{extraID}", 3 + active.Count(x => x), ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable | ImGuiTableFlags.Reorderable))
+
+        List<ExtraCondition> extraConditions = [];
+        foreach (var (sourcePlugin, pluginConditions) in C.Extra_Conditions)
+        {
+	        foreach (var (conditionName, conditionActive) in pluginConditions)
+	        {
+		        if (!conditionActive) continue;
+		        if (!P.ConditionsManager.conditions.TryGetValue(sourcePlugin,
+			            out var conditionsFromPlugin) ||
+		            !conditionsFromPlugin.TryGetValue(conditionName, out var extraCondition)) continue;
+		        extraConditions.Add(extraCondition);
+	        }
+        }
+        
+        if(ImGui.BeginTable($"##rules{extraID}", 3 + active.Count(x => x) + extraConditions.Count, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable | ImGuiTableFlags.Reorderable))
         {
             ImGui.TableSetupColumn("  ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
             if(C.Cond_State) ImGui.TableSetupColumn("状态");
@@ -284,7 +303,14 @@ public static unsafe class GuiRules
             if(C.Cond_Gearset) ImGui.TableSetupColumn("套装");
             if(C.Cond_Players) ImGui.TableSetupColumn("玩家");
             if(C.Cond_OnlineStatus) ImGui.TableSetupColumn("在线状态");
+            if(C.Cond_Mount) ImGui.TableSetupColumn("坐骑");
             if(C.Cond_Delay) ImGui.TableSetupColumn("延迟");
+
+            foreach (var extraCondition in extraConditions)
+            {
+	            ImGui.TableSetupColumn(extraCondition.label);
+            }
+            
             ImGui.TableSetupColumn("预设");
             ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize | ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableHeadersRow();
@@ -859,7 +885,46 @@ public static unsafe class GuiRules
                     if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
                 }
                 filterCnt++;
-                
+
+                if(C.Cond_Mount)
+                {
+                    ImGui.TableNextColumn();
+                    //Mount
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    if(ImGui.BeginCombo("##mount", rule.Mounts.Select(x => Svc.Data.GetExcelSheet<Mount>().GetRowOrDefault(x)?.Singular.ExtractText().ToTitleCase() ?? $"{x}").PrintRange(rule.Not.Mounts.Select(x => Svc.Data.GetExcelSheet<Mount>().GetRowOrDefault(x)?.Singular.ExtractText().ToTitleCase() ?? $"{x}"), out var fullList), C.ComboSize))
+                    {
+                        FiltersSelection();
+
+                        if(Player.Available && Utils.GetCurrentMountId() != 0)
+                        {
+                            var currentMount = Utils.GetCurrentMountId();
+                            var currentMountName = Svc.Data.GetExcelSheet<Mount>().GetRowOrDefault(currentMount)?.Singular.ExtractText().ToTitleCase() ?? $"{currentMount}";
+                            if(ImGui.Selectable($"Current: {currentMountName}"))
+                            {
+                                if(!rule.Mounts.Contains(currentMount))
+                                    rule.Mounts.Add(currentMount);
+                            }
+                            ImGui.Separator();
+                        }
+
+                        foreach(var mount in Svc.Data.GetExcelSheet<Mount>().Where(m => !m.Singular.ExtractText().IsNullOrEmpty()))
+                        {
+                            var name = mount.Singular.ExtractText().ToTitleCase() ?? "";
+                            if(Filters[filterCnt].Length > 0 && !name.Contains(Filters[filterCnt], StringComparison.OrdinalIgnoreCase)) continue;
+                            if(OnlySelected[filterCnt] && !rule.Mounts.Contains(mount.RowId)) continue;
+                            if(ThreadLoadImageHandler.TryGetIconTextureWrap(mount.Icon, false, out var texture))
+                            {
+                                ImGui.Image(texture.Handle, iconSize);
+                                ImGui.SameLine();
+                            }
+                            DrawSelector($"{name}##{mount.RowId}", mount.RowId, rule.Mounts, rule.Not.Mounts);
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if(fullList != null) ImGuiEx.Tooltip(UI.AnyNotice + fullList);
+                }
+                filterCnt++;
+
                 if(C.Cond_Delay)
                 {
                     ImGui.TableNextColumn();
@@ -881,6 +946,13 @@ public static unsafe class GuiRules
                         ImGui.EndCombo();
                     }
                     ImGuiEx.Tooltip("Set delays before rule activates or deactivates");
+                }
+
+                foreach (var extraCondition in extraConditions)
+                {
+	                ImGui.TableNextColumn();
+	                ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+	                extraCondition.Draw(rule);
                 }
 
                 ImGui.TableNextColumn();
@@ -974,9 +1046,9 @@ public static unsafe class GuiRules
         ImGuiEx.Text(nullable, arg2);
     }
 
-    private static void DrawSelector<T>(string name, T value, ICollection<T> values, ICollection<T> notValues) => DrawSelector(name, [value], values, notValues);
+    internal static void DrawSelector<T>(string name, T value, ICollection<T> values, ICollection<T> notValues) => DrawSelector(name, [value], values, notValues);
 
-    private static void DrawSelector<T>(string name, IEnumerable<T> value, ICollection<T> values, ICollection<T> notValues)
+    internal static void DrawSelector<T>(string name, IEnumerable<T> value, ICollection<T> values, ICollection<T> notValues)
     {
         var buttonSize = ImGuiHelpers.GetButtonSize(" ");
         var size = new Vector2(buttonSize.Y);
